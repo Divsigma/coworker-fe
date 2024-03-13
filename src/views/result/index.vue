@@ -64,7 +64,7 @@
 <script>
 import { ElLoading, ElMessage } from "element-plus";
 import * as echarts from "echarts";
-import * as common from './common.js'
+import * as common from '../common.js'
 export default{
     data(){
         return{
@@ -344,7 +344,9 @@ export default{
               .catch((error) => {
                 console.log(error);
                 // loading.close();
+
                 this.assignData(null, null);
+
                 ElMessage({
                   showClose: true,
                   message: "结果尚未生成,请稍后",
@@ -377,23 +379,23 @@ export default{
           return Math.ceil(Object.keys(this.job_info_dict).length / this.itemsPerPage);
         },
         currentPageItems() {
-          // const start = (this.currentPage - 1) * this.itemsPerPage;
-          // const end = start + this.itemsPerPage;
-          // return Object.keys(this.job_info_dict).slice(start, end).reduce((obj, key) => {
-          //   obj[key] = this.job_info_dict[key];
-          //   return obj;
-          // }, {});
-          var test_obj = {
-            'selectedIp': '123.34.23.3:8000',
-            'type': '测试输出', 
-            'selectedVideoId': 'v0', 
-            'mode': 'latency',
-            'delay_constraint': 0.2,
-            'acc_constraint': 0.8
-          }
-          return {
-            'abcd': test_obj
-          }
+          const start = (this.currentPage - 1) * this.itemsPerPage;
+          const end = start + this.itemsPerPage;
+          return Object.keys(this.job_info_dict).slice(start, end).reduce((obj, key) => {
+            obj[key] = this.job_info_dict[key];
+            return obj;
+          }, {});
+          // var test_obj = {
+          //   'selectedIp': '123.34.23.3:8000',
+          //   'type': '测试输出', 
+          //   'selectedVideoId': 'v0', 
+          //   'mode': 'latency',
+          //   'delay_constraint': 0.2,
+          //   'acc_constraint': 0.8
+          // }
+          // return {
+          //   'abcd': test_obj
+          // }
         },
 
 
@@ -453,11 +455,14 @@ export default{
             this.delay_list = JSON.parse(delay_list);
             // console.log(this.submit_jobs);
         }
+
         const job_info = sessionStorage.getItem("job_info_dict");
-        if(job_info){
+        if (job_info) {
             this.job_info_dict = JSON.parse(job_info);
-            console.log(this.job_info_dict);
+        } else {
+          this.job_info_dict = common.STATIC_SUBMITED_JOB_DICT;
         }
+        console.log("[mounted] this.job_info_dict = ", this.job_info_dict);
 
         const submitJobs = sessionStorage.getItem("submit_jobs");
         if (submitJobs) {

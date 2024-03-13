@@ -1,49 +1,14 @@
 <template>
     <div class="content">
-        <!-- 视频任务配置new  -->
-        <!-- <el-card shadow="hover" style="margin-left: 20px;margin-right: 20px;">
-            <div slot="header" style="font-size: 20px; font-weight: bold; margin-bottom: 20px;">视频任务配置</div>
-
-            <div style="display: flex; flex-direction: column; align-items: center;">
-              
-              <div>
-                <div v-for="(values, job_id, index) in currentPageItems" class="available-node-result"
-                  v-on:click="selectItem(job_id)"
-                  v-bind:class="{ 'selected': selected === job_id }"
-                >
-                  <div class="centered-div">
-                    <ul style="list-style-type: none;">
-                        <li style="font-size: 16px; font-weight: bold;">{{values.selectedIp}}</li>
-                        <li class="subli">摄像头ID: {{ values.selectedVideoId }}</li>
-                        <li class="subli">描述: {{ values.type }}</li>
-                        <li class="subli">优化模式: {{ values.mode == 'latency'? '时延优先':'精度优先' }}</li>
-                        <li class="subli">
-                            {{ values.mode === 'latency' ? '时延约束' : '精度约束' }}: {{ values.mode === 'latency' ? values.delay_constraint : values.acc_constraint }}
-                        </li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-
-              <div class="pagination">
-                <el-button @click="prevPage" :disabled="currentPage === 1">上一页</el-button>
-                <el-button @click="nextPage" :disabled="currentPage === pageCount">下一页</el-button>
-              </div>
-            </div>
-
-        </el-card> -->
-
-
         <!-- 运行时情境 -->
-        <div class="card-container">
+        <div class="card-container" style="height: 500px;">
             <!-- 应用情境 -->
-            <el-card shadow="hover" class="card" style="flex: 1;height:500px;">
+            <el-card shadow="hover" class="card" style="flex: 1;height:100%;overflow: scroll;">
                 <div slot="header"  style="font-size: 20px;font-weight: bold; margin-bottom: 20px;display: flex; align-items: center;">
-                  <span style="margin-right: 50px;">应用情境</span>
+                  <span style="margin-right: 50px;">任务情境</span>
                   <div class="custom-select">
-                        <select v-model="selectedJob" @change="selectItem(selectedJob['job_id'])">
-                         
-                        <option value="" disabled selected>请选择查询数据流</option>
+                        <select v-model="selectedJob" @change="selectQctxJob(selectedJob['job_id'])">
+                        <option value="" disabled selected>选择查询任务</option>
                         <option
                             v-for="(values, job_id, index) in job_info_dict"
                             :key="job_id"
@@ -65,54 +30,41 @@
                       <div style="flex:1;margin-left:10px;">
                         {{ selectedJob.mode === 'latency' ? '时延约束' : '精度约束' }}: {{ selectedJob.mode === 'latency' ? selectedJob.delay_constraint+'s' : selectedJob.acc_constraint }}
                       </div>
-                      
                 </div>
-                
-                    <a style="text-decoration:none;color:black;" :href="selected ? '/#/detail' : null">
-                      
-                      <div class="canvas-container" style="margin-top:20px">
-                          <div class="inner-div">
-                              <span>时延(s)</span>
-                              <canvas ref="delayCanvas" width="150" height="150"></canvas>
-                          </div>
-                          <div class="inner-div">
-                              <span>目标数量(个)</span>
-                              <canvas ref="objNumCanvas" width="150" height="150"></canvas>
-                          </div>
-                      </div>
+              
+                <el-card shadow="hover" style="margin: 20px; overflow: scroll; height: 100%;">
+                  <!-- 选框容器 -->
+                  <div ref="checkboxContainer">
+                    <el-checkbox @change="toggleQctxDelay()" :disabled="!selected" v-model="qctx_check_delay">时延</el-checkbox>
+                    <!-- <el-checkbox v-for="(item, idx) in keyList" :key="idx" :label="item" @change="toggleChart(item)" :disabled="!selected">{{ item }}</el-checkbox> -->
+                    <el-checkbox v-for="(item, idx) in qctx_key_list" 
+                    :key="idx" 
+                    :label="item" 
+                    @change="toggleChart(KEY_TYPE_QCTX, item)" 
+                    :disabled="!selected" 
+                    v-model="qctx_check_boxes[idx]">{{ item }}</el-checkbox>
+                  </div>
 
-                      <div class="canvas-container">
-                        <!-- {{ obj_size }} -->
-                          <div v-show="obj_size" class="inner-div">
-                              <span>目标大小</span>
-                              <canvas ref="objSizeCanvas" width="150" height="150"></canvas>
-                          </div>
-                          <div class="inner-div">
-                              <span>场景稳定性</span>
-                              <canvas ref="objStableCanvas" width="150" height="150"></canvas>
-                          </div>
-                      </div>
-                    </a>
+                  <!-- 画布容器 -->
+                  <div>
+                    <!-- <div v-show="showOriginal" style="width: 500px; height: 250px; margin-top: 20px; float: left;">
+                      <img :src="videoUrl + selected" style="width: 100%; height: 90%;" />
+                    </div> -->
+                    <div v-for="(item, idx) in qctx_key_list" :key="idx" style="float: left;margin-left: 20px;">
+                      <div v-show="shouldShowChart(KEY_TYPE_QCTX, item)" :id="item" style="width: 500px; height: 250px; margin-top: 20px;"></div>
+                    </div>
+                  </div>
+              </el-card>
 
-                <div>
-                </div>
             </el-card>
             
             <!-- 资源情境 -->
-            <el-card shadow="hover" class="card" style="flex: 1;height:500px;">
+            <el-card shadow="hover" class="card" style="flex: 1;height:100%;overflow: scroll;">
                 <div slot="header"  style="font-size: 20px;font-weight: bold; margin-bottom: 20px;display: flex; align-items: center;">
                     <span style="margin-right: 50px;">资源情境</span>
-                    <!-- <el-select v-model="selectedIp" placeholder="请选择IP地址" @change="showSelectedInfo">
-                        <el-option
-                            v-for="(info, ip) in cluster_info"
-                            :key="ip"
-                            :label="ip"
-                            :value="ip"
-                        ></el-option>
-                    </el-select> -->
                     <div class="custom-select">
-                        <select v-model="selectedIp" @change="showSelectedInfo">
-                        <option value="" disabled selected>请选择IP地址</option>
+                        <select v-model="rtss_selected_node" @change="selectRtssNode(rtss_selected_node)">
+                        <option value="" disabled selected>选择节点</option>
                         <option
                             v-for="(info, ip) in cluster_info"
                             :key="ip"
@@ -122,158 +74,57 @@
                         <span class="custom-arrow">&#9662;</span>
                     </div>
                 </div>
-                
-                    <div>
-                      <!-- {{ cluster_info }} -->
-                        <!-- 第一行 CPU利用率+内存利用率 -->
-                        <div class="canvas-container" style="margin-top:52px">
-                            <div class="inner-div">
-                                <span>CPU利用率</span>
-                                <canvas ref="cpuCanvas" width="150" height="150"></canvas>
-                            </div>
-                            <div class="inner-div">
-                                <span>内存利用率</span>
-                                <canvas ref="memCanvas" width="150" height="150"></canvas>
-                            </div>
-                        </div>
-                        
-                        <!-- 第二行 GPU利用率+网络带宽 -->
-                        <div class="canvas-container">
-                            <div class="inner-div">
-                                <span>GPU利用率</span>
-                                <!-- <div>{{ cluster_info[selectedIp]['gpu_utilization'] }}</div> -->
-                                <canvas ref="gpuCanvas" width="150" height="150"></canvas>
-                            </div>
-                            <div class="inner-div">
-                                <span>网络带宽(KB/s)</span>
-                                <!-- <div>{{ cluster_info[selectedIp]['net_ratio(MBps)'] }}</div> -->
-                                <canvas ref="netCanvas" width="150" height="150"></canvas>
-                            </div>
-                        </div>
+
+                <el-card shadow="hover" style="margin: 20px; overflow: scroll; height: 100%;">
+                  <!-- 选框容器 -->
+                  <div ref="rtssCheckboxContainer">
+                    <el-checkbox v-for="(item, idx) in rtss_key_list" 
+                    :key="idx" 
+                    :label="item" 
+                    @change="toggleChart(KEY_TYPE_RTSS, item)" 
+                    :disabled="!selected" 
+                    v-model="rtss_check_boxes[idx]">{{ item }}</el-checkbox>
+                  </div>
+
+                  <!-- 画布容器 -->
+                  <div>
+                    <!-- <div v-show="showOriginal" style="width: 500px; height: 250px; margin-top: 20px; float: left;">
+                      <img :src="videoUrl + selected" style="width: 100%; height: 90%;" />
+                    </div> -->
+                    <div v-for="(item, idx) in rtss_key_list" :key="idx" style="float: left;margin-left: 20px;">
+                      <div v-show="shouldShowChart(KEY_TYPE_RTSS, item)" :id="item" style="width: 500px; height: 250px; margin-top: 20px;"></div>
                     </div>
+                  </div>
+                </el-card>
                     
             </el-card>
         </div>
 
         <!-- 任务调度配置 -->
-        <el-card shadow="hover" style="margin: 20px; height: 300px;">
+        <el-card shadow="hover" style="margin: 20px; height: 100%;overflow: scroll;">
           <div slot="header" style="font-size: 20px;font-weight: bold; margin-bottom: 20px;">任务调度配置</div>
-          <div>
-        <div class="info-box" >
-          <!-- {{ plan }} -->
-          <div v-for="(h1_value, h1_key) in modifiedPlan" style="flex: 1;">
-            <div class="info-h1">{{ h1_key }}</div>
-            <div>
-              <div class="info-h1-flex-text" v-for="(h2_v, h2_k) in h1_value">
-                <div 
-                v-bind:class="{'info-h2-1': h1_key === '云边协同配置', 'info-h2-2': h1_key !== '云边协同配置'}">{{ mapTOChinese(h2_k) }}</div>
 
-                <!-- 以按钮方式显示特定配置 -->
-                <!-- 云边协同配置 -->
-                <!-- 1、flow_mapping: 本机、边缘、云端 -->
-                <!-- <div v-if="h1_key === '云边协同配置'" class="info-h2-flex-text">
-                  <el-radio-group
-                    direction="row"
-                    v-model="h1_value[h2_k]['node_role']"
-                    :disabled="true"
-                  >
-                    <el-radio-button
-                      class="user-radio"
-                      v-for="item in node_type_list"
-                      :label="item.key"
-                      >{{ item.ui_value }}</el-radio-button
-                    >
-                  </el-radio-group>
-                </div> -->
-                <div v-if="h1_key === '云边协同配置'" class="info-h2-flex-text">
-                  <!-- <el-radio-group
-                    direction="row"
-                    v-model="h1_value[h2_k]['node_role']"
-                    :disabled="true"
-                    > -->
-                  <!-- {{ h1_value[h2_k]['node_ip'] === selectedJob['selectedIp'] ? 'host' : 'cloud' }} -->
-                  <!-- {{ getSelectedNode(h1_value,h2_k) }} -->
-                  <!-- <el-radio-group
-                    direction="row"
-                    :v-model="getSelectedNode(h1_value,h2_k)"
-                    :disabled="true"
-                  > -->
-                  <!-- <el-radio-group
-                    direction="row"
-                    :disabled="true"
-                  >
-                    <el-radio-button
-                      class="user-radio"
-                      v-for="item in node_type_list"
-                      :label="item.key"
-                      :key="item.key"
-                      :checked="item.key === getSelectedNode(h1_value,h2_k)"
-                      >{{ item.ui_value }}</el-radio-button>
-                  </el-radio-group> -->
-                  <div v-for="item in node_type_list" 
-                  v-bind:class="{'button-not-selected': item.key != getSelectedNode(h1_value,h2_k), 'button-selected': item.key === getSelectedNode(h1_value,h2_k)}"
-                  >
-                    <span class="centered-text">{{ item.ui_value }}</span>
-                  </div>
-
-                </div>
-                <!-- 视频配置 -->
-                <!-- 2、video_conf: 编解码 -->
-                <div v-else-if="h2_k === 'encoder'" class="info-h2-flex-text">
-                  <el-radio-group
-                    direction="row"
-                    v-model="h1_value[h2_k]"
-                    :disabled="true"
-                  >
-                    <el-radio-button
-                      class="user-radio"
-                      v-for="item in encoder_type_list"
-                      :label="item.key"
-                      >{{ item.ui_value }}</el-radio-button
-                    >
-                  </el-radio-group>
-                </div>
-                <!-- 3、video_conf: 帧率 -->
-                <div v-else-if="h2_k === 'fps'" class="info-h2-flex-text">
-                  <el-radio-group
-                    direction="row"
-                    v-model="h1_value[h2_k]"
-                    :disabled="true"
-                  >
-                    <el-radio-button
-                      class="user-radio"
-                      v-for="item in fps_type_list"
-                      :label="item.key"
-                      >{{ item.ui_value }}</el-radio-button
-                    >
-                  </el-radio-group>
-                </div>
-                <!-- 4、video_conf: 分辨率 -->
-                <div
-                  v-else-if="h2_k === 'resolution'"
-                  class="info-h2-flex-text"
-                >
-                  <el-radio-group
-                    direction="row"
-                    v-model="h1_value[h2_k]"
-                    :disabled="true"
-                  >
-                    <el-radio-button
-                      class="user-radio"
-                      v-for="item in resolution_type_list"
-                      :label="item.key"
-                      >{{ item.ui_value }}</el-radio-button
-                    >
-                  </el-radio-group>
-                </div>
-
-                <!-- 以文本方式显示其他h2内容 -->
-                <div v-else class="info-h2-flex-text">{{ h2_v }}</div>
+          <el-card shadow="hover" style="margin: 20px; overflow: scroll; height: 100%;">
+              <!-- 选框容器 -->
+              <div ref="planCheckboxContainer">
+                <el-checkbox v-for="(item, idx) in plan_key_list" 
+                :key="idx" 
+                :label="item" 
+                @change="toggleChart(KEY_TYPE_PLAN, item)" 
+                :disabled="!selected" 
+                v-model="plan_check_boxes[idx]">{{ item }}</el-checkbox>
               </div>
-            </div>
-          </div>
-        </div>
-      </div>
+
+              <!-- 画布容器 -->
+              <div>
+                <!-- <div v-show="showOriginal" style="width: 500px; height: 250px; margin-top: 20px; float: left;">
+                  <img :src="videoUrl + selected" style="width: 100%; height: 90%;" />
+                </div> -->
+                <div v-for="(item, idx) in plan_key_list" :key="idx" style="float: left;margin-left: 20px;">
+                  <div v-show="shouldShowChart(KEY_TYPE_PLAN, item)" :id="item" style="width: 500px; height: 250px; margin-top: 20px;"></div>
+                </div>
+              </div>
+          </el-card>
           
         </el-card>
 
@@ -282,18 +133,15 @@
 <script>
 import { ElLoading, ElMessage } from "element-plus";
 import * as echarts from "echarts";
+import * as common from '../common.js';
 export default{
     data(){
         return{
             // url
-            resultUrl: "/dag/query/get_agg_info/",
-            resourceUrl: "/serv/get_cluster_info",
+            resultUrl: "/dag/get_agg_info/",
+            sched_ctx_url: "/dag/sched_ctx",
             videoUrl: "video/user/video/",
 
-            cluster_info:null,
-            selectedIp:"",
-            // 资源
-            resource_display:[],
             // 可查询任务
             submit_jobs:[],
             // 选取的查询任务
@@ -301,148 +149,60 @@ export default{
             selectedJob:"",
             // 查询结果
             result:null,
-            appended_result:null,
-            runtime:null,
-            plan:null,
+            appended_result: null,
+            cluster_info: null,
 
-            // 结果细节
-            delay: null,
-            obj_n: null,
-            obj_size: null,
-            obj_stable: null,
+            // 显示chart的信息类型（仅支持固定类型）
+            KEY_TYPE_QCTX: "qctx",
+            KEY_TYPE_RTSS: "rtss",
+            KEY_TYPE_PLAN: "plan",
+
+            // 任务情境
+            qctx_key_list: [],
+            qctx_check_delay: false,
+            qctx_check_boxes: [],
+            qctx_select_charts:[],
+
+            // 资源情境
+            rtss_key_list: [],
+            rtss_check_boxes: [],
+            rtss_select_charts: [],
+            rtss_selected_node: null,
+
+            // 调度配置
+            plan_key_list: [],
+            plan_check_boxes: [],
+            plan_select_charts: [],
 
             // 选择的查询任务
             selected: null,
 
-            node_type_list: [],
             // 前端获取已经提交的任务
-            job_info_dict:{},
+            job_info_dict: {},
 
             // 绘制结果折线图
-            chart:null,
+            chart: null,
 
             // 定时器
-            timer:null,
-
-            // 分页控件
-            itemsPerPage: 3, // 每页显示的数量
-            currentPage: 1, // 当前页数
-
-            proNode:"",
-
+            timer: null,
             
         };
     },
     methods: {
-      mapTOChinese(item){
-        if(item === 'encoder'){
-          return "编 码";
-        }else if(item === 'fps'){
-          return "帧 率";
-        }else if(item === 'resolution'){
-          return "分辨率";
-        }else{
-          return item;
-        }
-      },
-        getSelectedNode(h1_value,h2_k){
-            const proIP = h1_value[h2_k]['node_ip'];
-            // console.log("处理IP:" + proIP);
-            const submitIP = this.selectedJob['selectedIp'].split(':')[0];
-            // console.log("提交IP:" + submitIP);
-            if(proIP === submitIP){
-              // console.log("host");
-              return "host";
-            }else if(proIP === "114.212.81.11"){
-              // console.log("cloud");
-              return "cloud";
-            }
-            // console.log("edge");
-            return "edge";
+        mapTOChinese(item){
+          if(item === 'encoder'){
+            return "编 码";
+          }else if(item === 'fps'){
+            return "帧 率";
+          }else if(item === 'resolution'){
+            return "分辨率";
+          }else{
+            return item;
+          }
         },
         
-        // 绘制圆环
-        drawCircle(canvas,content_filled,percentage,color) {
-            // const canvas = this.$refs.circleCanvas;
-            const context = canvas.getContext('2d');
-
-            const centerX = canvas.width / 2;
-            const centerY = canvas.height / 2;
-            const radius = Math.min(centerX, centerY) - 20;
-            const lineWidth = 10;
-            // const bandwidth = "50 Mbps"; // 网络带宽文本
-
-            context.clearRect(0, 0, canvas.width, canvas.height);
-
-            // 绘制圆环的背景
-            context.beginPath();
-            context.arc(centerX, centerY, radius, 0, Math.PI * 2);
-            context.lineWidth = lineWidth;
-            context.strokeStyle = '#ccc'; // 圆环的颜色
-            context.stroke();
-
-            // 绘制网络带宽文本
-            context.font = '20px Arial';
-            context.fillStyle = '#333'; // 文本颜色
-            context.textAlign = 'center';
-            context.textBaseline = 'middle';
-            context.fillText(content_filled, centerX, centerY);
-
-            // 绘制圆环的前景
-            // const percentage = 1; // 设置圆环的百分比
-            const endAngle = (Math.PI * 2 * percentage) - (Math.PI / 2);
-            context.beginPath();
-            context.arc(centerX, centerY, radius, -Math.PI / 2, endAngle);
-            context.lineWidth = lineWidth;
-            context.strokeStyle = color; // 前景颜色
-            context.stroke();
-        },
-        prevPage() {
-          if (this.currentPage > 1) {
-            this.currentPage--;
-          }
-        },
-        nextPage() {
-          if (this.currentPage < this.pageCount) {
-            this.currentPage++;
-          }
-        },
-        // 获得最大值
-        getMaxKey(dict){
-          var maxv = 0;
-          var maxk = '';
-          for(const key in dict){
-            if(dict[key] > maxv){
-              maxv = dict[key];
-              maxk = key;
-            }
-          }
-          return [maxk,maxv];
-        },
-        // 资源情境
-        showSelectedInfo(){
-            // console.log(this.selectedIp);
-            const info = this.cluster_info[this.selectedIp];
-
-            // cpu使用率
-            this.drawCircle(this.$refs.cpuCanvas,info['n_cpu']+'核',info['cpu_ratio']*0.01,'#5b9bd5');
-
-            // 内存使用率
-            // console.log(info['mem_total']);
-            const mem_total = info['mem_total'].toFixed(1);
-            this.drawCircle(this.$refs.memCanvas,mem_total+'GB',info['mem_ratio']*0.01,'#c5e0b4');
-
-            // 获得使用最多的卡的显存和使用率
-            const kv = this.getMaxKey(info['gpu_mem_utilization']);
-            const gpu_num = kv[0];
-            const gpu_ratio = kv[1];
-            this.drawCircle(this.$refs.gpuCanvas,info['gpu_mem_total'][gpu_num]+"GB",gpu_ratio*0.01,'#ffd966');
-
-            // 带宽
-            this.drawCircle(this.$refs.netCanvas,info['net_ratio(MBps)'].toFixed(2)*1024,1,'#f4b183');
-        },
-        // 点击选择查询任务
-        selectItem(job_id){
+        // 选定所需要查询的任务，触发qctx_key_list和plan_key_list生成
+        selectQctxJob(job_id) {
           // console.log(job_id);
           // console.log(this.selectJob);
           this.selected = job_id;
@@ -450,122 +210,431 @@ export default{
           this.submit_job = job_id;
           this.updateResultUrl();
         },
-        clearCanvas(canvas){
-          const context = canvas.getContext('2d');
-          context.clearRect(0, 0, canvas.width, canvas.height);
+
+        // 选定所需要查询的节点，触发rtss_key_list生成
+        selectRtssNode(node_id) {
+          console.log("[selectRtssNode] this.rtss_selected_node=", this.rtss_selected_node);
+          console.log("[selectRtssNode] node_id=", node_id);
+          this.updateKeyList(this.cluster_info[node_id], this.KEY_TYPE_RTSS);
         },
 
-        // 查询结果
+        // 获取appended_result中的query_ctx的key列表，更新前端key列表
+        updateKeyList(data, key_type) {
+          if (!data) {
+            console.log("[updateKeyList] data is null");
+            return;
+          }
+          console.log("[updateKeyList] data=", data);
+          console.log("[updateKeyList] key_type=", key_type);
+
+          var curr_kl = [];
+          for(var i = 0;i < data.length;i ++) {
+            var obj_kl;
+            switch (key_type) {
+              case this.KEY_TYPE_RTSS: {
+                obj_kl = Object.keys(data[i]);
+                break;
+              }
+              case this.KEY_TYPE_QCTX: {
+                obj_kl = Object.keys(data[i][common.QSS_INFO_KEY_QUERY_CTX]);
+                break;
+              }
+              case this.KEY_TYPE_PLAN: {
+                obj_kl = [common.QSS_INFO_KEY_FPS, common.QSS_INFO_KEY_RESOL, common.QSS_INFO_KEY_SERVMAP];
+                break;
+              }
+              default: {
+                console.log("[updateKeyList] unsupport key_type=", key_type);
+                break;
+              }
+            }
+            for(var j = 0; j < obj_kl.length; j++){
+              if(curr_kl.indexOf(obj_kl[j]) == -1){
+                curr_kl.push(obj_kl[j]);
+              }
+            }
+          }
+          const isSame = (arr1, arr2) => {
+            if (arr1.length !== arr2.length) {
+              return false;
+            }
+            return arr1.every(item => arr2.includes(item));
+          };
+
+          // 如果keyList有变化则清空selectedCharts和checkboxes的选中状态
+          console.log("[updateKeyList] curr_kl=", curr_kl);
+          switch (key_type) {
+            case this.KEY_TYPE_QCTX: {
+              if (!isSame(this.qctx_key_list, curr_kl)) {
+                this.qctx_key_list = curr_kl;
+                this.clearQctxCheckboxes();
+              }
+              break;
+            }
+            case this.KEY_TYPE_RTSS: {
+              if (!isSame(this.rtss_key_list, curr_kl)) {
+                this.rtss_key_list = curr_kl;
+                this.clearRtssCheckboxes();
+              }
+              break;
+            }
+            case this.KEY_TYPE_PLAN: {
+              if (!isSame(this.plan_key_list, curr_kl)) {
+                this.plan_key_list = curr_kl;
+                this.clearPlanCheckboxes();
+              }
+              break;
+            }
+            default:
+              break;
+          }
+          this.selectedCharts = [];
+          
+        },
+
+        // 清除qctx复选框的勾选状态
+        clearQctxCheckboxes() {
+          this.qctx_check_boxes = this.qctx_check_boxes.map(() => false);
+        },
+        clearRtssCheckboxes() {
+          this.rtss_check_boxes = this.rtss_check_boxes.map(() => false);
+        },
+        clearPlanCheckboxes() {
+          this.plan_check_boxes = this.plan_check_boxes.map(() => false);
+        },
+
+        toggleQctxDelay(){
+          if(!this.showOriginal){
+            this.showOriginal = true;
+          }else{
+            this.showOriginal = !this.showOriginal;
+          }
+          console.log(this.showOriginal);
+        },
+
+        // 选择需要显示的chart
+        toggleChart(key_type, item_key){
+          // 已经被选择则清除，没被选择则加入到list中
+          console.log("[toggleChart] key_type = ", key_type);
+          console.log("[toggleChart] item_key = ", item_key);
+          switch (key_type) {
+            case this.KEY_TYPE_QCTX: {
+              console.log("[toggleChart] (before) len(this.qctx_select_charts) = ", this.qctx_select_charts.length);
+              console.log(this.qctx_select_charts.includes(item_key));
+              if (this.qctx_select_charts.includes(item_key)) {
+                this.qctx_select_charts = this.qctx_select_charts.filter(item => item !== item_key);
+                echarts.dispose(document.getElementById(item_key));
+              } else {
+                this.qctx_select_charts.push(item_key);
+                this.plotChart(key_type, item_key);
+              }
+              console.log("[toggleChart] this.qctx_select_charts = ", this.qctx_select_charts);
+              break;
+            }
+            case this.KEY_TYPE_RTSS: {
+              if (this.rtss_select_charts.includes(item_key)) {
+                this.rtss_select_charts = this.rtss_select_charts.filter(item => item !== item_key);
+                echarts.dispose(document.getElementById(item_key));
+              } else {
+                this.rtss_select_charts.push(item_key);
+                this.plotChart(key_type, item_key);
+              }
+              console.log("[toggleChart] this.rtss_select_charts = ", this.rtss_select_charts);
+              break;
+            }
+            case this.KEY_TYPE_PLAN: {
+              console.log("[toggleChart] (before) len(this.plan_select_charts) = ", this.plan_select_charts.length);
+              console.log(this.plan_select_charts.includes(item_key));
+              if (this.plan_select_charts.includes(item_key)) {
+                this.plan_select_charts = this.plan_select_charts.filter(item => item !== item_key);
+                echarts.dispose(document.getElementById(item_key));
+              } else {
+                this.plan_select_charts.push(item_key);
+                this.plotChart(key_type, item_key);
+              }
+              console.log("[toggleChart] this.plan_select_charts = ", this.plan_select_charts);
+              break;
+            }
+            default:
+              break;
+          }
+
+        },
+
+        // 提供给v-show，决定是否显示chart
+        shouldShowChart(key_type, item_key){
+          var flag = false;
+          switch (key_type) {
+            case this.KEY_TYPE_QCTX: {
+              flag = this.qctx_select_charts.includes(item_key);
+              break;
+            }
+            case this.KEY_TYPE_RTSS: {
+              flag = this.rtss_select_charts.includes(item_key);
+              break;
+            }
+            case this.KEY_TYPE_PLAN: {
+              flag = this.plan_select_charts.includes(item_key);
+              break;
+            }
+            default: {
+              console.log("[shouldShowChart] unsupport key_type=", key_type);
+              break;
+            }
+          }
+          return flag;
+        },
+
+        plotChart(key_type, itemKey){
+          console.log("[plotChart] key_type = " + key_type);
+          console.log("[plotChart] itemKey = " + itemKey);
+          // this.updateResultUrl();
+          
+          // 1、获取画图的chart
+          var chart;
+          if (echarts.getInstanceByDom(document.getElementById(itemKey)) === undefined) {
+            chart = echarts.init(document.getElementById(itemKey));
+          } else {
+            chart = echarts.getInstanceByDom(document.getElementById(itemKey));
+            // chart.clear();
+          }
+          // var chart = echarts.init(document.getElementById(itemKey));
+
+          // 2、获取itemKey字段的数据，itemKey可能是以下两种类型数据：
+          // （1）序列
+          // （2）序列的字典
+          const DATA_KEY_X = 'X';
+          const DATA_KEY_Y = 'Y';
+          var itemXYData;
+
+          switch (key_type) {
+            case this.KEY_TYPE_QCTX: {
+              itemXYData = this.appended_result.map(function(item) {
+                var X_val = item[common.QSS_INFO_KEY_TID];
+                var Y_dict = item[common.QSS_INFO_KEY_QUERY_CTX][itemKey];
+                if (typeof Y_dict !== 'object') {
+                  Y_dict = {[itemKey]: Y_dict};
+                }
+                return {[DATA_KEY_X]: X_val, [DATA_KEY_Y]: Y_dict};
+              });
+              break;
+            }
+            case this.KEY_TYPE_RTSS: {
+              itemXYData = this.cluster_info[this.rtss_selected_node].map(function(item) {
+                var X_val = item[common.RTSS_INFO_KEY_RTSS_ID];
+                var Y_dict = item[itemKey];
+                if (typeof Y_dict !== 'object') {
+                  Y_dict = {[itemKey]: Y_dict};
+                }
+                return {[DATA_KEY_X]: X_val, [DATA_KEY_Y]: Y_dict};
+              });
+              break;
+            }
+            case this.KEY_TYPE_PLAN: {
+              itemXYData = this.appended_result.map(function(item) {
+                var X_val = item[common.QSS_INFO_KEY_TID];
+                var Y_dict = item[itemKey];
+                if (typeof Y_dict !== 'object') {
+                  Y_dict = {[itemKey]: Y_dict};
+                }
+                return {[DATA_KEY_X]: X_val, [DATA_KEY_Y]: Y_dict};
+              });
+              break;
+            }
+            default:
+              break;
+          }
+
+          console.log("[plotChart] itemXYData=", itemXYData);
+
+          var series_v = {};
+          var series_kl = [];
+
+          // 3、初始化itemKey值字段的数据列表
+          for (var i = 0; i < itemXYData.length; i++) {
+            var kl = Object.keys(itemXYData[i][DATA_KEY_Y]);
+            for (var j = 0; j < kl.length; j++) {
+              if (series_kl.indexOf(kl[j]) == -1) {
+                series_kl.push(kl[j]);
+              }
+            }
+          }
+          for (var i = 0; i < series_kl.length; i++) {
+            var k = series_kl[i];
+            series_v[k] = [];
+          }
+          // 4、生成各itemKey值字段的数据序列
+          for (var i = 0; i < itemXYData.length; i++) {
+            var value_dict = itemXYData[i][DATA_KEY_Y];
+            for (var value_k in value_dict) {
+              var k = value_k;
+              var v = value_dict[value_k];
+              series_v[k].push(v);
+            }
+          }
+          // 5、生成各itemKey值字段的chart数据序列和与其对应的legend列表
+          var y_axis_type = 'value';
+          var chart_series_list = [];
+          var chart_legend_list = [];
+          // console.log("seriesData entries: " + Object.entries(seriesData));
+          for (var ent of Object.entries(series_v)) {
+            // console.log("ent[0]=" + ent[0]);
+            // console.log("ent[1]=" + ent[1]);
+            var k = ent[0];
+            var v_list = ent[1];
+            if (v_list.length > 0 && typeof v_list[0] === 'string') {
+              y_axis_type = 'category';
+            }
+            chart_legend_list.push(k);
+            chart_series_list.push({
+              name: k,
+              type: "line",
+              label: {
+                show: true,
+                position: "top",
+                color: "black",
+                fontSize: 12,
+                formatter: function (d) {
+                  return d.data;
+                },
+              },
+              data: v_list,
+            });
+          }
+
+          // 6、喂数据画图
+          const option = {
+            xAxis: {
+              type: 'category',
+              data: itemXYData.map((item) => item[DATA_KEY_X]), // 使用映射后的横坐标数据
+              name: "任务ID"
+            },
+            yAxis:{
+              type: y_axis_type,
+              name: '值'
+            },
+            legend: {
+              data: chart_legend_list
+            },
+            series: chart_series_list,
+            title:{
+              show: true,
+              text: this.mapTOChinese(itemKey),
+            }
+          };
+          chart.setOption(option);
+        },
+
+        // 将获取的qss和rtss赋值给全局变量
+        assignAggData(data, job_id) {
+          if (!data) {
+            data = common.STATIC_RESULT;
+          }
+          console.log("[assignAggData] data=");
+          console.log(data);
+
+          if (!job_id) {
+            job_id = Object.keys(data[common.KEY_QSS])[0];
+          }
+          console.log("[assignAggData] job_id=" + job_id);
+
+          this.appended_result = data[common.KEY_QSS][job_id];
+          this.cluster_info = data[common.KEY_RTSS];
+
+          const len = this.appended_result.length;
+
+          console.log("[assignAggData] result len=" + len);
+        
+          // 获取一次agg_data后，需要更新qctx_key_list、rtss_key_list
+          // this.updateQctxKeyList();
+          this.updateKeyList(this.appended_result, this.KEY_TYPE_QCTX);
+          this.updateKeyList(this.appended_result, this.KEY_TYPE_PLAN);
+        },
+        
+        // 查询qss和rtss结果
         updateResultUrl() {
           // console.log(this.submit_job);
-          if(this.submit_job){
+          if (this.submit_job) {
             const url = this.resultUrl + this.submit_job;
-            // console.log(url);
+            console.log("[updateResultUrl] url = ", url);
+
             // const loading = ElLoading.service({
             //   lock: true,
             //   text: "Loading",
             //   background: "rgba(0, 0, 0, 0.7)",
             // });
-            fetch(url)
-              .then((response) => response.json())
-              .then((data) => {
-                // loading.close();       
-                // console.log(this.runtime);
 
-                this.appended_result = data['appended_result'];
-                // console.log(this.appended_result);
-                const result = this.appended_result;
-                const len = this.appended_result.length;
-                // console.log(len);
-                this.runtime = result[len - 1]['ext_runtime'];
-                this.plan = result[len - 1]['ext_plan'];
+            // 静态填充调试
+            this.assignAggData(null, null);
 
-                // 应用情境
-                if (this.runtime && this.runtime["delay"]) {
-                  this.delay = this.runtime["delay"].toFixed(2);
-                }
+            // 对接接口调试
+            // fetch(url)
+            //   .then((response) => response.json())
+            //   .then((data) => {
+            //     // loading.close();       
+            //     // console.log(this.runtime);
 
-                if (this.runtime && this.runtime["obj_n"]) {
-                  this.obj_n = Math.floor(this.runtime["obj_n"]);
-                } 
+            //     this.assignAggData(data, this.submit_job);
 
-                if (this.runtime && this.runtime["obj_size"]) {
-                  this.obj_size = this.runtime["obj_size"].toFixed(2);
-                }
+            //   })
+            //   .catch((error) => {
+            //     console.log("[updateResultUrl] fetch error=", error);
 
-                if (this.runtime && this.runtime["obj_stable"]) {
-                  this.obj_stable = this.runtime["obj_stable"];
-                }
+            //     this.assignAggData(null, null);
 
-                this.drawCircle(this.$refs.delayCanvas,this.delay,1,'#5b9bd5');
-                this.drawCircle(this.$refs.objNumCanvas,this.obj_n,1,'#c5e0b4');
-                this.drawCircle(this.$refs.objSizeCanvas,this.obj_size,1,'#ffd966');
-                this.drawCircle(this.$refs.objStableCanvas,this.obj_stable,1,'#f4b183');
-              //   this.drawResult();
-                  
-              })
-              .catch((error) => {
-                console.log(error);
-                // loading.close();
-                // ElMessage({
-                //   showClose: true,
-                //   message: "结果尚未生成,请稍后",
-                //   type: "error",
-                //   duration: 1500,
-                // });
-                // this.result = null;
-              });
+            //     // loading.close();
+            //     // ElMessage({
+            //     //   showClose: true,
+            //     //   message: "结果尚未生成,请稍后",
+            //     //   type: "error",
+            //     //   duration: 1500,
+            //     // });
+            //     // this.result = null;
+            //   });
           }
           
         },
 
-        // 更新系统资源状态
-        updateResourceUrl() {
-          const url = this.resourceUrl;
+        assignSchedCtx(data, job_id) {
+          if (!data) {
+            data = common.STATIC_SCHED_CTX;
+          }
+          console.log("[assignSchedCtx] data=");
+          console.log(data);
+
+          if (!job_id) {
+            job_id = Object.keys(data)[0];
+          }
+          console.log("[assignSchedCtx] job_id=" + job_id);
+
+          const ctx_list = data[job_id];
+
+          const len = ctx_list.length;
+
+          console.log("[assignSchedCtx] ctx_list len=" + len);
+
+        },
+
+        // 更新调度器状态
+        updateSchedCtxUrl() {
+          const url = this.sched_ctx_url;
+
           fetch(url)
             .then((resp) => resp.json())
             .then((data) => {
-            //   console.log(data);
-              this.cluster_info = data;
+              // this.cluster_info = data;
+
+              this.assignSchedCtx(data, this.submit_job);
+
             })
             .catch((err) => {
               console.log(err);
+              this.assignSchedCtx(null, null);
             });
         },
         
     },
     computed: {
-        pageCount() {
-          return Math.ceil(Object.keys(this.job_info_dict).length / this.itemsPerPage);
-        },
-        currentPageItems() {
-          const start = (this.currentPage - 1) * this.itemsPerPage;
-          const end = start + this.itemsPerPage;
-          return Object.keys(this.job_info_dict).slice(start, end).reduce((obj, key) => {
-            obj[key] = this.job_info_dict[key];
-            return obj;
-          }, {});
-        },
-        modifiedRuntime() {
-            if (!this.runtime) {
-                return null;
-            }
-            return Object.fromEntries(
-                Object.entries(this.runtime).map(([key, value]) => {
-                if (key === "delay") {
-                    return ["时延", value.toFixed(2)];
-                } else if (key === "obj_n") {
-                    return ["目标数量", value];
-                } else if (key === "obj_size") {
-                    return ["目标大小", value.toFixed(2)];
-                } else if (key === "obj_stable") {
-                    return ["场景稳定性", value];
-                } else {
-                    return [key, value];
-                }
-                })
-            );
-        },
         // 改写中文
         modifiedInfo() {
             if (!this.job_info_dict) {
@@ -590,337 +659,28 @@ export default{
             );
             return modified_info;
         },
-        modifiedPlan() {
-            if (!this.plan) {
-                return null;
-            }
-            return Object.fromEntries(
-                Object.entries(this.plan).map(([key, value]) => {
-                if (key === "flow_mapping") {
-                    return ["云边协同配置", value];
-                } else if (key === "video_conf") {
-                    return ["视频配置", value];
-                } else {
-                    return [key, value];
-                }
-                })
-            );
-        },
     },
     mounted(){
         
-        // if (this.delay !== null) {
-        //     this.drawCircle();
-        // }
         // 获取可查询的任务相关信息 存储在submit_jobs和job_info_dict中
         const submitJobs = sessionStorage.getItem("submit_jobs");
         if (submitJobs) {
             this.submit_jobs = JSON.parse(submitJobs);
             // console.log(this.submit_jobs);
         }
-        const job_info = sessionStorage.getItem("job_info_dict");
-        if(job_info){
-            this.job_info_dict = JSON.parse(job_info);
-            // console.log(this.job_info_dict);
-        }
-        this.resource_display = ["cpu_ratio","mem_ratio","gpu_ratio","net_ratio(MBps)"],
-        // TO_REMOVE: 静态填充
-        // this.job_info_dict = { 
-        //     "GLOBAL_ID_1": 
-        //     { 
-        //         "job_id": "GLOBAL_ID_1", 
-        //         "selectedIp": "172.27.142.247:5001", 
-        //         "selectedVideoId": "1", 
-        //         "type": "people in meeting-room",
-        //          "mode": "latency", 
-        //          "delay_constraint": "0.6", 
-        //          "acc_constraint": "0.6" 
-        //     },
-        //     "GLOBAL_ID_2": 
-        //     { 
-        //         "job_id": "GLOBAL_ID_2", 
-        //         "selectedIp": "172.27.142.247:5002", 
-        //         "selectedVideoId": "2", 
-        //         "type": "people in meeting-room",
-        //          "mode": "latency", 
-        //          "delay_constraint": "0.6", 
-        //          "acc_constraint": "0.6" 
-        //     },
-        //     "GLOBAL_ID_3": 
-        //     { 
-        //         "job_id": "GLOBAL_ID_3", 
-        //         "selectedIp": "172.27.142.247:5003", 
-        //         "selectedVideoId": "3", 
-        //         "type": "people in meeting-room",
-        //          "mode": "latency", 
-        //          "delay_constraint": "0.6", 
-        //          "acc_constraint": "0.6" 
-        //     },
-        // },
-    //     this.cluster_info = {
-    // "114.212.81.11": {
-    //     "cpu_ratio": 0.1,
-    //     "gpu_mem": {
-    //         "0": 1.2761433919270835,
-    //         "1": 1.2761433919270835,
-    //         "2": 1.2761433919270835,
-    //         "3": 1.2761433919270835
-    //     },
-    //     "gpu_utilization": {
-    //         "0": 0,
-    //         "1": 0,
-    //         "2": 0,
-    //         "3": 0
-    //     },
-    //     "mem_ratio": 2.5,
-    //     "n_cpu": 48,
-    //     "net_ratio(MBps)": 0.00019,
-    //     "node_role": "cloud",
-    //     "swap_ratio": 0
-    // },
-    // "172.27.142.247": {
-    //     "cpu_ratio": 5.9,
-    //     "gpu_mem": {
-    //         "0": 12.066474327674278
-    //     },
-    //     "gpu_utilization": {
-    //         "0": 0
-    //     },
-    //     "mem_ratio": 24.5,
-    //     "n_cpu": 4,
-    //     "net_ratio(MBps)": 0.00143,
-    //     "node_role": "edge",
-    //     "swap_ratio": 0
-    // }
-    //     };
 
-    //     this.appended_result = [
-    //     {
-    //         "count_result": {
-    //             "total": 19,
-    //             "up": 16
-    //         },
-    //         "delay": 0.22060694013323104,
-    //         "execute_flag": true,
-    //         "frame_id": 774,
-    //         "n_loop": 63,
-    //         "proc_resource_info_list": [
-    //             {
-    //                 "cpu_util_limit": 1,
-    //                 "cpu_util_use": 0.27425,
-    //                 "latency": 1.1754405498504639,
-    //                 "pid": 11065
-    //             }
-    //         ]
-    //     },
-    //     {
-    //         "count_result": {
-    //             "total": 18,
-    //             "up": 15
-    //         },
-    //         "delay": 0.20396453993661062,
-    //         "execute_flag": true,
-    //         "frame_id": 780,
-    //         "n_loop": 64,
-    //         "proc_resource_info_list": [
-    //             {
-    //                 "cpu_util_limit": 1,
-    //                 "cpu_util_use": 0.27399999999999997,
-    //                 "latency": 1.0766024589538574,
-    //                 "pid": 11065
-    //             }
-    //         ]
-    //     },
-    //     {
-    //         "count_result": {
-    //             "total": 16,
-    //             "up": 12
-    //         },
-    //         "delay": 0.18409783499581472,
-    //         "execute_flag": true,
-    //         "frame_id": 786,
-    //         "n_loop": 65,
-    //         "proc_resource_info_list": [
-    //             {
-    //                 "cpu_util_limit": 1,
-    //                 "cpu_util_use": 0.27949999999999997,
-    //                 "latency": 0.9475843906402588,
-    //                 "pid": 11065
-    //             }
-    //         ]
-    //     },
-    //     {
-    //         "count_result": {
-    //             "total": 19,
-    //             "up": 16
-    //         },
-    //         "delay": 0.21081665584019255,
-    //         "execute_flag": true,
-    //         "frame_id": 792,
-    //         "n_loop": 66,
-    //         "proc_resource_info_list": [
-    //             {
-    //                 "cpu_util_limit": 1,
-    //                 "cpu_util_use": 0.27725,
-    //                 "latency": 1.1265530586242676,
-    //                 "pid": 11065
-    //             }
-    //         ]
-    //     },
-    //     {
-    //         "count_result": {
-    //             "total": 17,
-    //             "up": 16
-    //         },
-    //         "delay": 0.21186903544834684,
-    //         "execute_flag": true,
-    //         "frame_id": 798,
-    //         "n_loop": 67,
-    //         "proc_resource_info_list": [
-    //             {
-    //                 "cpu_util_limit": 1,
-    //                 "cpu_util_use": 0.26975,
-    //                 "latency": 1.1213617324829102,
-    //                 "pid": 11065
-    //             }
-    //         ]
-    //     },
-    //     {
-    //         "count_result": {
-    //             "total": 19,
-    //             "up": 14
-    //         },
-    //         "delay": 0.21648645401000977,
-    //         "execute_flag": true,
-    //         "frame_id": 804,
-    //         "n_loop": 68,
-    //         "proc_resource_info_list": [
-    //             {
-    //                 "cpu_util_limit": 1,
-    //                 "cpu_util_use": 0.273,
-    //                 "latency": 1.1257836818695068,
-    //                 "pid": 11065
-    //             }
-    //         ]
-    //     },
-    //     {
-    //         "count_result": {
-    //             "total": 18,
-    //             "up": 16
-    //         },
-    //         "delay": 0.21124557086399626,
-    //         "execute_flag": true,
-    //         "frame_id": 810,
-    //         "n_loop": 69,
-    //         "proc_resource_info_list": [
-    //             {
-    //                 "cpu_util_limit": 1,
-    //                 "cpu_util_use": 0.276,
-    //                 "latency": 1.0686159133911133,
-    //                 "pid": 11065
-    //             }
-    //         ]
-    //     },
-    //     {
-    //         "count_result": {
-    //             "total": 20,
-    //             "up": 15
-    //         },
-    //         "delay": 0.21829724311828613,
-    //         "execute_flag": true,
-    //         "frame_id": 816,
-    //         "n_loop": 70,
-    //         "proc_resource_info_list": [
-    //             {
-    //                 "cpu_util_limit": 1,
-    //                 "cpu_util_use": 0.271,
-    //                 "latency": 1.180079460144043,
-    //                 "pid": 11065
-    //             }
-    //         ]
-    //     },
-    //     {
-    //         "count_result": {
-    //             "total": 20,
-    //             "up": 15
-    //         },
-    //         "delay": 0.21993769918169295,
-    //         "execute_flag": true,
-    //         "frame_id": 822,
-    //         "n_loop": 71,
-    //         "proc_resource_info_list": [
-    //             {
-    //                 "cpu_util_limit": 1,
-    //                 "cpu_util_use": 0.27575,
-    //                 "latency": 1.1873185634613037,
-    //                 "pid": 11065
-    //             }
-    //         ]
-    //     },
-    //     {
-    //         "count_result": {
-    //             "total": 19,
-    //             "up": 15
-    //         },
-    //         "delay": 0.2089878831590925,
-    //         "execute_flag": true,
-    //         "frame_id": 828,
-    //         "n_loop": 72,
-    //         "proc_resource_info_list": [
-    //             {
-    //                 "cpu_util_limit": 1,
-    //                 "cpu_util_use": 0.27949999999999997,
-    //                 "latency": 1.1177542209625244,
-    //                 "pid": 11065
-    //             }
-    //         ]
-    //     },
-    //     {
-    //         "count_result": {
-    //             "total": 18,
-    //             "up": 14
-    //         },
-    //         "delay": 0.20454134259905135,
-    //         "execute_flag": true,
-    //         "frame_id": 834,
-    //         "n_loop": 73,
-    //         "proc_resource_info_list": [
-    //             {
-    //                 "cpu_util_limit": 1,
-    //                 "cpu_util_use": 0.27425,
-    //                 "latency": 1.0840375423431396,
-    //                 "pid": 11065
-    //             }
-    //         ]
-    //     }
-    // ],
-        this.node_type_list = [
-                { key: "host", ui_value: "视频边端" },
-                { key: "edge", ui_value: "其他边端" },
-                { key: "cloud", ui_value: "云端" },
-                ];
-        this.encoder_type_list = [
-            { key: "H264", ui_value: "H264" },
-            { key: "JPEG", ui_value: "JPEG" },
-            // { key: "x", ui_value: "..." },
-            ];
-        this.fps_type_list = [
-            { key: 1, ui_value: "1" },
-            { key: 5, ui_value: "5" },
-            { key: 10, ui_value: "10" },
-            { key: 20, ui_value: "20" },
-            { key: 30, ui_value: "30" },
-            ];
-        this.resolution_type_list = [
-            { key: "360p", ui_value: "480x360" },
-            { key: "480p", ui_value: "640x480" },
-            { key: "720p", ui_value: "1280x720" },
-            { key: "1080p", ui_value: "1920x1080" },
-        ];
+        const job_info = sessionStorage.getItem("job_info_dict");
+        if (job_info) {
+          this.job_info_dict = JSON.parse(job_info);
+        } else {
+          this.job_info_dict = common.STATIC_SUBMITED_JOB_DICT;
+        }
+        console.log("[mounted] this.job_info_dict = ", this.job_info_dict);
+
         // this.initChart();
         this.timer = setInterval(() => {
           this.updateResultUrl();
-          this.updateResourceUrl();
+          // this.updateSchedCtxUrl();
         }, 6000);
     },
     beforeUnmount() {
