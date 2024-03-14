@@ -138,7 +138,7 @@ export default{
     data(){
         return{
             // url
-            resultUrl: "/dag/get_agg_info/",
+            resultUrl: "/dag/get_agg_info",
             sched_ctx_url: "/dag/sched_ctx",
             videoUrl: "video/user/video/",
 
@@ -161,7 +161,7 @@ export default{
             qctx_key_list: [],
             qctx_check_delay: false,
             qctx_check_boxes: [],
-            qctx_select_charts:[],
+            qctx_select_charts: [],
 
             // 资源情境
             rtss_key_list: [],
@@ -209,6 +209,9 @@ export default{
           sessionStorage.setItem("job_id", JSON.stringify(this.selected));
           this.submit_job = job_id;
           this.updateResultUrl();
+          this.clearQctxCheckboxesAndCharts();
+          this.clearRtssCheckboxesAndCharts();
+          this.clearPlanCheckboxesAndCharts();
         },
 
         // 选定所需要查询的节点，触发rtss_key_list生成
@@ -216,6 +219,7 @@ export default{
           console.log("[selectRtssNode] this.rtss_selected_node=", this.rtss_selected_node);
           console.log("[selectRtssNode] node_id=", node_id);
           this.updateKeyList(this.cluster_info[node_id], this.KEY_TYPE_RTSS);
+          this.clearRtssCheckboxesAndCharts();
         },
 
         // 获取appended_result中的query_ctx的key列表，更新前端key列表
@@ -267,40 +271,41 @@ export default{
             case this.KEY_TYPE_QCTX: {
               if (!isSame(this.qctx_key_list, curr_kl)) {
                 this.qctx_key_list = curr_kl;
-                this.clearQctxCheckboxes();
+                this.clearQctxCheckboxesAndCharts();
               }
               break;
             }
             case this.KEY_TYPE_RTSS: {
               if (!isSame(this.rtss_key_list, curr_kl)) {
                 this.rtss_key_list = curr_kl;
-                this.clearRtssCheckboxes();
+                this.clearRtssCheckboxesAndCharts();
               }
               break;
             }
             case this.KEY_TYPE_PLAN: {
               if (!isSame(this.plan_key_list, curr_kl)) {
                 this.plan_key_list = curr_kl;
-                this.clearPlanCheckboxes();
+                this.clearPlanCheckboxesAndCharts();
               }
               break;
             }
             default:
               break;
           }
-          this.selectedCharts = [];
-          
         },
 
         // 清除qctx复选框的勾选状态
-        clearQctxCheckboxes() {
+        clearQctxCheckboxesAndCharts() {
           this.qctx_check_boxes = this.qctx_check_boxes.map(() => false);
+          this.qctx_select_charts = [];
         },
-        clearRtssCheckboxes() {
+        clearRtssCheckboxesAndCharts() {
           this.rtss_check_boxes = this.rtss_check_boxes.map(() => false);
+          this.rtss_select_charts = [];
         },
-        clearPlanCheckboxes() {
+        clearPlanCheckboxesAndCharts() {
           this.plan_check_boxes = this.plan_check_boxes.map(() => false);
+          this.plan_select_charts = [];
         },
 
         toggleQctxDelay(){
@@ -493,7 +498,7 @@ export default{
                 show: true,
                 position: "top",
                 color: "black",
-                fontSize: 12,
+                fontSize: 5,
                 formatter: function (d) {
                   return d.data;
                 },
@@ -551,11 +556,46 @@ export default{
           this.updateKeyList(this.appended_result, this.KEY_TYPE_PLAN);
         },
         
+        // 更新qctx、rtss、plan的已选图标
+        updateSelectCharts() {
+          var update_list = {
+            [this.KEY_TYPE_QCTX]: this.qctx_select_charts,
+            [this.KEY_TYPE_RTSS]: this.rtss_select_charts,
+            [this.KEY_TYPE_PLAN]: this.plan_select_charts,
+          }
+          console.log("[updateSelectCharts] update_list=%O", update_list);
+          for (var ent of Object.entries(update_list)) {
+            console.log(ent);
+            var key_type = ent[0];
+            var item_key_list = ent[1];
+            for (var i = 0; i < item_key_list.length; i++) {
+              var item_key = item_key_list[i];
+              this.plotChart(key_type, item_key);
+            }
+            console.log("[updateSelectCharts] key_type=%s, len=%d, item_key_list=%O",
+                        key_type, item_key_list.length, item_key_list);
+          }
+          for (var i = 0; i < this.qctx_select_charts.length; i++) {
+            var item_key = this.qctx_select_charts[i];
+            this.plotChart(this.KEY_TYPE_QCTX, item_key);
+          }
+          console.log
+          for (var i = 0; i < this.rtss_select_charts.length; i++) {
+            var item_key = this.rtss_select_charts[i];
+            this.plotChart(this.KEY_TYPE_RTSS, item_key);
+          }
+          for (var i = 0; i < this.plan_select_charts.length; i++) {
+            var item_key = this.plan_select_charts[i];
+            this.plotChart(this.KEY_TYPE_PLAN, item_key);
+          }
+        },
+
         // 查询qss和rtss结果
         updateResultUrl() {
           // console.log(this.submit_job);
           if (this.submit_job) {
-            const url = this.resultUrl + this.submit_job;
+            // const url = this.resultUrl + this.submit_job;
+            const url = this.resultUrl;
             console.log("[updateResultUrl] url = ", url);
 
             // const loading = ElLoading.service({
@@ -565,32 +605,30 @@ export default{
             // });
 
             // 静态填充调试
-            this.assignAggData(null, null);
+            // this.assignAggData(null, null);
 
             // 对接接口调试
-            // fetch(url)
-            //   .then((response) => response.json())
-            //   .then((data) => {
-            //     // loading.close();       
-            //     // console.log(this.runtime);
+            fetch(url)
+              .then((response) => response.json())
+              .then((data) => {
+                // loading.close();
 
-            //     this.assignAggData(data, this.submit_job);
+                this.assignAggData(data, this.submit_job);
 
-            //   })
-            //   .catch((error) => {
-            //     console.log("[updateResultUrl] fetch error=", error);
+              })
+              .catch((error) => {
+                console.log("[updateResultUrl] fetch error=", error);
 
-            //     this.assignAggData(null, null);
+                this.assignAggData(null, null);
 
-            //     // loading.close();
-            //     // ElMessage({
-            //     //   showClose: true,
-            //     //   message: "结果尚未生成,请稍后",
-            //     //   type: "error",
-            //     //   duration: 1500,
-            //     // });
-            //     // this.result = null;
-            //   });
+                // loading.close();
+                ElMessage({
+                  showClose: true,
+                  message: "结果尚未生成,请稍后",
+                  type: "error",
+                  duration: 1500,
+                });
+              });
           }
           
         },
@@ -681,6 +719,9 @@ export default{
         this.timer = setInterval(() => {
           this.updateResultUrl();
           // this.updateSchedCtxUrl();
+
+          // 更新toggleChart选中的图标数据
+          this.updateSelectCharts();
         }, 6000);
     },
     beforeUnmount() {

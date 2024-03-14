@@ -69,7 +69,7 @@ export default{
     data(){
         return{
             // url
-            resultUrl: "/dag/get_agg_info/",
+            resultUrl: "/dag/get_agg_info",
             resourceUrl: "/serv/get_cluster_info",
             videoUrl: "video/user/video/",
 
@@ -321,7 +321,8 @@ export default{
           console.log("[updateResultUrl] trigger once, this.submit_job = " + this.submit_job);
 
           if(this.submit_job !== null && this.submit_job !== undefined){
-            const url = this.resultUrl + this.submit_job;
+            // const url = this.resultUrl + this.submit_job;
+            const url = this.resultUrl;
 
             console.log("[updateResultUrl] url = " + url);
             // const loading = ElLoading.service({
@@ -333,10 +334,10 @@ export default{
             fetch(url)
               .then((response) => response.json())
               .then((data) => {
-                loading.close();
+                // loading.close();
   
                 this.result = data;
-                loading.close();
+                // loading.close();
 
                 this.assignData(data, this.submit_job);
   

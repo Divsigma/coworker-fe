@@ -35,14 +35,8 @@ const viteConfig = defineConfig((mode: ConfigEnv) => {
 					rewrite: (path) => path.replace(/^\/gitee/, ''),
 				},
 				'/dag': {
-					target: "http://192.168.56.102:8000",
-			
-					// target: "http://114.212.81.11:5000",
-					// target: "http://114.212.81.11:6000",
-			
-					// target: "http://172.27.134.58:5000",
-					// target: "http://127.0.0.1:5000",
-			
+					// target: "http://192.168.56.102:8000",
+					target: "http://114.212.81.11:8000",
 					changeOrigin: true,
 					rewrite: path => path.replace(/^\/dag/, '')
 				  },
