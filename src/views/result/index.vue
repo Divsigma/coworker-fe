@@ -186,40 +186,135 @@ export default{
             x:item[common.QSS_INFO_KEY_TID],
             y:item[common.QSS_INFO_KEY_RESULT][itemKey],
           }))
-          // console.log(data);
+
+          // 2、获取itemKey字段的数据，itemKey字段对应的字典值可能是以下类型数据：
+          // （1）数值的序列
+          // （2）字典的序列
+          const DATA_KEY_X = 'X';
+          const DATA_KEY_Y = 'Y';
+          var itemXYData;
+          itemXYData = this.appended_result.map(function(item) {
+            var X_val = item[common.QSS_INFO_KEY_TID];
+            var Y_dict = item[common.QSS_INFO_KEY_RESULT][itemKey];
+            if (typeof Y_dict !== 'object') {
+              Y_dict = {[itemKey]: Y_dict};
+            }
+            return {[DATA_KEY_X]: X_val, [DATA_KEY_Y]: Y_dict};
+          });
+
+          console.log("[plotChart] itemXYData=", itemXYData);
+
+          var series_v = {};
+          var series_kl = [];
+
+          // 3、初始化itemKey值字段的数据列表
+          for (var i = 0; i < itemXYData.length; i++) {
+            var kl = Object.keys(itemXYData[i][DATA_KEY_Y]);
+            for (var j = 0; j < kl.length; j++) {
+              if (series_kl.indexOf(kl[j]) == -1) {
+                series_kl.push(kl[j]);
+              }
+            }
+          }
+          for (var i = 0; i < series_kl.length; i++) {
+            var k = series_kl[i];
+            series_v[k] = [];
+          }
+          // 4、生成各itemKey值字段的数据序列
+          for (var i = 0; i < itemXYData.length; i++) {
+            var value_dict = itemXYData[i][DATA_KEY_Y];
+            for (var value_k in value_dict) {
+              var k = value_k;
+              var v = value_dict[value_k];
+              series_v[k].push(v);
+            }
+          }
+          // 5、生成各itemKey值字段的chart数据序列和与其对应的legend列表
+          var y_axis_type = 'value';
+          var chart_series_list = [];
+          var chart_legend_list = [];
+          // console.log("seriesData entries: " + Object.entries(seriesData));
+          for (var ent of Object.entries(series_v)) {
+            // console.log("ent[0]=" + ent[0]);
+            // console.log("ent[1]=" + ent[1]);
+            var k = ent[0];
+            var v_list = ent[1];
+            if (v_list.length > 0 && typeof v_list[0] === 'string') {
+              y_axis_type = 'category';
+            }
+            chart_legend_list.push(k);
+            chart_series_list.push({
+              name: k,
+              type: "line",
+              label: {
+                show: true,
+                position: "top",
+                color: "black",
+                fontSize: 5,
+                formatter: function (d) {
+                  return d.data;
+                },
+              },
+              data: v_list,
+            });
+          }
+
+          // 6、喂数据画图
           const option = {
             xAxis: {
               type: 'category',
-              data: data.map((item) => item.x), // 使用映射后的横坐标数据
-              name: "帧数"
+              data: itemXYData.map((item) => item[DATA_KEY_X]), // 使用映射后的横坐标数据
+              name: "任务ID"
             },
             yAxis:{
-              type:'value',
-              name:'检测到的数量'
+              type: y_axis_type,
+              name: '值'
             },
-            series:[
-              {
-                data: data.map((item) => item.y),
-                type:'line',
-                label:{
-                  show:true,
-                  position:'bottom',
-                  textStyle:{
-                    fontSize:12
-                  }
-                }
-              }
-            ],
+            legend: {
+              data: chart_legend_list
+            },
+            series: chart_series_list,
             title:{
-              show:true,
+              show: true,
               text: this.mapTOChinese(itemKey),
             }
-            // legend:{
-            //   data:[key],
-            // }
-            
           };
           chart.setOption(option);
+
+          // // console.log(data);
+          // const option = {
+          //   xAxis: {
+          //     type: 'category',
+          //     data: data.map((item) => item.x), // 使用映射后的横坐标数据
+          //     name: "帧数"
+          //   },
+          //   yAxis:{
+          //     type:'value',
+          //     name:'检测到的数量'
+          //   },
+          //   series:[
+          //     {
+          //       data: data.map((item) => item.y),
+          //       type:'line',
+          //       label:{
+          //         show:true,
+          //         position:'bottom',
+          //         textStyle:{
+          //           fontSize:12
+          //         }
+          //       }
+          //     }
+          //   ],
+          //   title:{
+          //     show:true,
+          //     text: this.mapTOChinese(itemKey),
+          //   }
+          //   // legend:{
+          //   //   data:[key],
+          //   // }
+            
+          // };
+          // chart.setOption(option);
         },
 
         prevPage() {

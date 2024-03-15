@@ -93,12 +93,14 @@ export const STATIC_RESULT = {
     }
 }
 
+export const CTX_RESP_KEY_CTX = "ctx_dict"
 export const CTX_KEY_ID = "ctx_id"
 export const CTX_KEY_AVG_BIAS = "avg_bias"
 export const CTX_KEY_PID_PARAM = "pid_param"
 
-export const CTX_KEY_LAT_SERIES = "lat_series"
-// export const CTX_KEY_LAT_SERIES = "chunk_avg_tot_delay_series"
+export const CTX_KEY_SIMPLE_DC_LAT_SERIES = "lat_series"
+export const CTX_KEY_AIMD_LAT_SERIES = "chunk_avg_tot_delay_series"
+export const CTX_KEYS_LIST_LAT_SERIES = [CTX_KEY_SIMPLE_DC_LAT_SERIES, CTX_KEY_AIMD_LAT_SERIES];
 
 export const CTX_KEY_AVG_NOBJ = "avg_nobj"
 
@@ -109,8 +111,8 @@ const static_sched_ctx = {
     [CTX_KEY_ID]: 's-s-id',
     [CTX_KEY_AVG_BIAS]: [-0.234, -0.034, 0.234],
     
-    'chunk_avg_tot_delay_series': [0.434, 0.234, 0.434],
-    [CTX_KEY_LAT_SERIES]: [0.434, 0.234, 0.434],
+    [CTX_KEY_AIMD_LAT_SERIES]: [0.434, 0.234, 0.434],
+    [CTX_KEY_SIMPLE_DC_LAT_SERIES]: [0.434, 0.234, 0.434],
     
     [CTX_KEY_AVG_NOBJ]: 5.14,
     'avg_obj_sz': 511.1,
@@ -123,14 +125,16 @@ const static_sched_ctx = {
 }
 
 export const STATIC_SCHED_CTX = {
-    "QUERY-ID": [static_sched_ctx, static_sched_ctx, static_sched_ctx, static_sched_ctx]
+    [CTX_RESP_KEY_CTX]: {
+        "6XEDL": [static_sched_ctx, static_sched_ctx, static_sched_ctx, static_sched_ctx]
+    }
 }
 
 export const STATIC_SUBMITED_JOB_DICT = { 
-    'GLOBAL_ID_1': {
-        'job_id': 'GLOBAL_ID_1',
-        'selectedIp': '123.34.23.3:8000',
-        'type': '测试输出，job_id=GLOBAL_ID_1', 
+    'JU0Y7': {
+        'job_id': 'JU0Y7',
+        'selectedIp': 'JU0Y7',
+        'type': '测试输出', 
         'selectedVideoId': 'v0', 
         'mode': 'latency',
         'delay_constraint': 0.2,

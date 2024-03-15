@@ -35,8 +35,10 @@
                 <el-card shadow="hover" style="margin: 20px; overflow: scroll; height: 100%;">
                   <!-- 选框容器 -->
                   <div ref="checkboxContainer">
-                    <el-checkbox @change="toggleQctxDelay()" :disabled="!selected" v-model="qctx_check_delay">时延</el-checkbox>
-                    <!-- <el-checkbox v-for="(item, idx) in keyList" :key="idx" :label="item" @change="toggleChart(item)" :disabled="!selected">{{ item }}</el-checkbox> -->
+                    <el-checkbox @change="toggleChart(KEY_TYPE_SCHED_CTX_DELAY, ITEM_KEY_SCHED_CTX_DELAY)" 
+                    :disabled="!selected" 
+                    v-model="sched_ctx_check_delay">平均时延</el-checkbox>
+
                     <el-checkbox v-for="(item, idx) in qctx_key_list" 
                     :key="idx" 
                     :label="item" 
@@ -50,6 +52,9 @@
                     <!-- <div v-show="showOriginal" style="width: 500px; height: 250px; margin-top: 20px; float: left;">
                       <img :src="videoUrl + selected" style="width: 100%; height: 90%;" />
                     </div> -->
+                    <div v-show="shouldShowChart(KEY_TYPE_SCHED_CTX_DELAY, ITEM_KEY_SCHED_CTX_DELAY)" 
+                         :id="ITEM_KEY_SCHED_CTX_DELAY"
+                         style="width: 500px; height: 250px; margin-top: 20px;"></div>                    
                     <div v-for="(item, idx) in qctx_key_list" :key="idx" style="float: left;margin-left: 20px;">
                       <div v-show="shouldShowChart(KEY_TYPE_QCTX, item)" :id="item" style="width: 500px; height: 250px; margin-top: 20px;"></div>
                     </div>
@@ -151,15 +156,18 @@ export default{
             result:null,
             appended_result: null,
             cluster_info: null,
+            sched_ctx_lat_result: null,
 
             // 显示chart的信息类型（仅支持固定类型）
             KEY_TYPE_QCTX: "qctx",
             KEY_TYPE_RTSS: "rtss",
             KEY_TYPE_PLAN: "plan",
+            KEY_TYPE_SCHED_CTX_DELAY: "sched_ctx_delay",
+            ID_KEY_SCHED_CTX_DELAY: "id_key_sched_ctx_delay",
+            ITEM_KEY_SCHED_CTX_DELAY: "平均时延",
 
             // 任务情境
             qctx_key_list: [],
-            qctx_check_delay: false,
             qctx_check_boxes: [],
             qctx_select_charts: [],
 
@@ -168,6 +176,10 @@ export default{
             rtss_check_boxes: [],
             rtss_select_charts: [],
             rtss_selected_node: null,
+
+            // 调度器情境
+            sched_ctx_check_delay: false,
+            sched_ctx_select_charts: [],
 
             // 调度配置
             plan_key_list: [],
@@ -216,8 +228,8 @@ export default{
 
         // 选定所需要查询的节点，触发rtss_key_list生成
         selectRtssNode(node_id) {
-          console.log("[selectRtssNode] this.rtss_selected_node=", this.rtss_selected_node);
-          console.log("[selectRtssNode] node_id=", node_id);
+          // console.log("[selectRtssNode] this.rtss_selected_node=", this.rtss_selected_node);
+          // console.log("[selectRtssNode] node_id=", node_id);
           this.updateKeyList(this.cluster_info[node_id], this.KEY_TYPE_RTSS);
           this.clearRtssCheckboxesAndCharts();
         },
@@ -228,8 +240,8 @@ export default{
             console.log("[updateKeyList] data is null");
             return;
           }
-          console.log("[updateKeyList] data=", data);
-          console.log("[updateKeyList] key_type=", key_type);
+          // console.log("[updateKeyList] data=", data);
+          // console.log("[updateKeyList] key_type=", key_type);
 
           var curr_kl = [];
           for(var i = 0;i < data.length;i ++) {
@@ -308,24 +320,13 @@ export default{
           this.plan_select_charts = [];
         },
 
-        toggleQctxDelay(){
-          if(!this.showOriginal){
-            this.showOriginal = true;
-          }else{
-            this.showOriginal = !this.showOriginal;
-          }
-          console.log(this.showOriginal);
-        },
-
         // 选择需要显示的chart
         toggleChart(key_type, item_key){
           // 已经被选择则清除，没被选择则加入到list中
-          console.log("[toggleChart] key_type = ", key_type);
-          console.log("[toggleChart] item_key = ", item_key);
+          // console.log("[toggleChart] key_type = ", key_type);
+          // console.log("[toggleChart] item_key = ", item_key);
           switch (key_type) {
             case this.KEY_TYPE_QCTX: {
-              console.log("[toggleChart] (before) len(this.qctx_select_charts) = ", this.qctx_select_charts.length);
-              console.log(this.qctx_select_charts.includes(item_key));
               if (this.qctx_select_charts.includes(item_key)) {
                 this.qctx_select_charts = this.qctx_select_charts.filter(item => item !== item_key);
                 echarts.dispose(document.getElementById(item_key));
@@ -333,7 +334,7 @@ export default{
                 this.qctx_select_charts.push(item_key);
                 this.plotChart(key_type, item_key);
               }
-              console.log("[toggleChart] this.qctx_select_charts = ", this.qctx_select_charts);
+              // console.log("[toggleChart] this.qctx_select_charts = ", this.qctx_select_charts);
               break;
             }
             case this.KEY_TYPE_RTSS: {
@@ -344,12 +345,10 @@ export default{
                 this.rtss_select_charts.push(item_key);
                 this.plotChart(key_type, item_key);
               }
-              console.log("[toggleChart] this.rtss_select_charts = ", this.rtss_select_charts);
+              // console.log("[toggleChart] this.rtss_select_charts = ", this.rtss_select_charts);
               break;
             }
             case this.KEY_TYPE_PLAN: {
-              console.log("[toggleChart] (before) len(this.plan_select_charts) = ", this.plan_select_charts.length);
-              console.log(this.plan_select_charts.includes(item_key));
               if (this.plan_select_charts.includes(item_key)) {
                 this.plan_select_charts = this.plan_select_charts.filter(item => item !== item_key);
                 echarts.dispose(document.getElementById(item_key));
@@ -357,7 +356,18 @@ export default{
                 this.plan_select_charts.push(item_key);
                 this.plotChart(key_type, item_key);
               }
-              console.log("[toggleChart] this.plan_select_charts = ", this.plan_select_charts);
+              // console.log("[toggleChart] this.plan_select_charts = ", this.plan_select_charts);
+              break;
+            }
+            case this.KEY_TYPE_SCHED_CTX_DELAY: {
+              if (this.sched_ctx_select_charts.includes(item_key)) {
+                this.sched_ctx_select_charts = this.sched_ctx_select_charts.filter(item => item !== item_key);
+                echarts.dispose(document.getElementById(item_key));
+              } else {
+                this.sched_ctx_select_charts.push(item_key);
+                this.plotChart(key_type, item_key);
+              }
+              // console.log("[toggleChart] this.sched_ctx_select_charts = ", this.sched_ctx_select_charts);
               break;
             }
             default:
@@ -382,6 +392,10 @@ export default{
               flag = this.plan_select_charts.includes(item_key);
               break;
             }
+            case this.KEY_TYPE_SCHED_CTX_DELAY: {
+              flag = this.sched_ctx_select_charts.includes(item_key);
+              break;
+            }
             default: {
               console.log("[shouldShowChart] unsupport key_type=", key_type);
               break;
@@ -391,9 +405,8 @@ export default{
         },
 
         plotChart(key_type, itemKey){
-          console.log("[plotChart] key_type = " + key_type);
-          console.log("[plotChart] itemKey = " + itemKey);
-          // this.updateResultUrl();
+          // console.log("[plotChart] key_type = " + key_type);
+          // console.log("[plotChart] itemKey = " + itemKey);
           
           // 1、获取画图的chart
           var chart;
@@ -405,9 +418,9 @@ export default{
           }
           // var chart = echarts.init(document.getElementById(itemKey));
 
-          // 2、获取itemKey字段的数据，itemKey可能是以下两种类型数据：
-          // （1）序列
-          // （2）序列的字典
+          // 2、获取itemKey字段的数据，itemKey字段对应的字典值可能是以下类型数据：
+          // （1）数值的序列
+          // （2）字典的序列
           const DATA_KEY_X = 'X';
           const DATA_KEY_Y = 'Y';
           var itemXYData;
@@ -444,6 +457,22 @@ export default{
                 }
                 return {[DATA_KEY_X]: X_val, [DATA_KEY_Y]: Y_dict};
               });
+              break;
+            }
+            case this.KEY_TYPE_SCHED_CTX_DELAY: {
+              // console.log("[plotChart] sched_ctx_lat_result=", this.sched_ctx_lat_result);
+              console.log(this.ID_KEY_SCHED_CTX_DELAY);
+              
+              itemXYData = this.sched_ctx_lat_result.map(function(item) {
+                console.log(this.ID_KEY_SCHED_CTX_DELAY);
+                var X_val = item[this.ID_KEY_SCHED_CTX_DELAY];
+
+                var Y_dict = item[itemKey];
+                if (typeof Y_dict !== 'object') {
+                  Y_dict = {[itemKey]: Y_dict};
+                }
+                return {[DATA_KEY_X]: X_val, [DATA_KEY_Y]: Y_dict};
+              }, this);
               break;
             }
             default:
@@ -562,32 +591,33 @@ export default{
             [this.KEY_TYPE_QCTX]: this.qctx_select_charts,
             [this.KEY_TYPE_RTSS]: this.rtss_select_charts,
             [this.KEY_TYPE_PLAN]: this.plan_select_charts,
+            [this.KEY_TYPE_SCHED_CTX_DELAY]: this.sched_ctx_select_charts
           }
-          console.log("[updateSelectCharts] update_list=%O", update_list);
+          // console.log("[updateSelectCharts] update_list=%O", update_list);
           for (var ent of Object.entries(update_list)) {
-            console.log(ent);
+            // console.log(ent);
             var key_type = ent[0];
             var item_key_list = ent[1];
             for (var i = 0; i < item_key_list.length; i++) {
               var item_key = item_key_list[i];
               this.plotChart(key_type, item_key);
             }
-            console.log("[updateSelectCharts] key_type=%s, len=%d, item_key_list=%O",
-                        key_type, item_key_list.length, item_key_list);
+            // console.log("[updateSelectCharts] key_type=%s, len=%d, item_key_list=%O",
+            //             key_type, item_key_list.length, item_key_list);
           }
-          for (var i = 0; i < this.qctx_select_charts.length; i++) {
-            var item_key = this.qctx_select_charts[i];
-            this.plotChart(this.KEY_TYPE_QCTX, item_key);
-          }
-          console.log
-          for (var i = 0; i < this.rtss_select_charts.length; i++) {
-            var item_key = this.rtss_select_charts[i];
-            this.plotChart(this.KEY_TYPE_RTSS, item_key);
-          }
-          for (var i = 0; i < this.plan_select_charts.length; i++) {
-            var item_key = this.plan_select_charts[i];
-            this.plotChart(this.KEY_TYPE_PLAN, item_key);
-          }
+          // for (var i = 0; i < this.qctx_select_charts.length; i++) {
+          //   var item_key = this.qctx_select_charts[i];
+          //   this.plotChart(this.KEY_TYPE_QCTX, item_key);
+          // }
+          // console.log
+          // for (var i = 0; i < this.rtss_select_charts.length; i++) {
+          //   var item_key = this.rtss_select_charts[i];
+          //   this.plotChart(this.KEY_TYPE_RTSS, item_key);
+          // }
+          // for (var i = 0; i < this.plan_select_charts.length; i++) {
+          //   var item_key = this.plan_select_charts[i];
+          //   this.plotChart(this.KEY_TYPE_PLAN, item_key);
+          // }
         },
 
         // 查询qss和rtss结果
@@ -637,20 +667,45 @@ export default{
           if (!data) {
             data = common.STATIC_SCHED_CTX;
           }
-          console.log("[assignSchedCtx] data=");
-          console.log(data);
+          console.log("[assignSchedCtx] data=", data);
 
           if (!job_id) {
-            job_id = Object.keys(data)[0];
+            job_id = Object.keys(data[common.CTX_RESP_KEY_CTX])[0];
           }
           console.log("[assignSchedCtx] job_id=" + job_id);
 
-          const ctx_list = data[job_id];
+          const ctx_list = data[common.CTX_RESP_KEY_CTX][job_id];
+          console.log("[assignSchedCtx] ctx_list=" + ctx_list);
 
           const len = ctx_list.length;
-
           console.log("[assignSchedCtx] ctx_list len=" + len);
 
+          if (len > 0) {
+            var lat_series_key = null;
+            for (const k of common.CTX_KEYS_LIST_LAT_SERIES) {
+              if (k in ctx_list[0]) {
+                lat_series_key = k;
+                break;
+              }
+            }
+
+            this.sched_ctx_lat_result = [];
+            for (const ctx of ctx_list) {
+              // 生成适用于plotChart的平均时延序列
+              var id = ctx[common.CTX_KEY_ID];
+              var lat_series_list = ctx[lat_series_key];
+              for (var i = 0; i < lat_series_list.length; i++) {
+                var v = lat_series_list[i];
+                this.sched_ctx_lat_result.push({
+                  [this.ID_KEY_SCHED_CTX_DELAY]: id + "_" + String(i),
+                  [this.ITEM_KEY_SCHED_CTX_DELAY]: v
+                });
+              }
+              // TODO：生成适用于plotChart的其他序列
+            }
+
+            console.log(this.sched_ctx_lat_result);
+          }
         },
 
         // 更新调度器状态
@@ -718,7 +773,7 @@ export default{
         // this.initChart();
         this.timer = setInterval(() => {
           this.updateResultUrl();
-          // this.updateSchedCtxUrl();
+          this.updateSchedCtxUrl();
 
           // 更新toggleChart选中的图标数据
           this.updateSelectCharts();
