@@ -1,50 +1,57 @@
 <template>
     <div>
       <div class="content">
-        
+
+        <el-card shadow="hover" style="margin: 20px;">
+          <div slot="header" style="font-size: 20px;font-weight: bold;">任务信息总览</div>
+          <!-- {{ ipVideoFlowInfo }} -->
+          <el-table :data="ipVideoFlowInfo" style="width: 100%">
+              <el-table-column label="节点" width="200">
+              <template #default="scope">
+                  <div style="display: flex; align-items: center">
+                  <!-- <el-icon><timer /></el-icon> -->
+                  <span style="margin-left: 10px">{{ scope.row.selectedIp }}</span>
+                  </div>
+              </template>
+              </el-table-column>
+              <el-table-column label="摄像头" width="200">
+              <template #default="scope">
+                  <div>{{ scope.row.selectedVideoId }}</div>
+              </template>
+              </el-table-column>
+              <el-table-column label="配置套餐" width="200">
+              <template #default="scope">
+                  <div>{{ scope.row.selectedFlow }}</div>
+              </template>
+              </el-table-column>
+              <el-table-column label="调度器" width="200">
+              <template #default="scope">
+                  <div>{{ scope.row.selectedScheduler }}</div>
+              </template>
+              </el-table-column>
+              
+          </el-table>
+
+        </el-card>
+
+
         <!-- 选择视频流 -->
         <el-card shadow="hover" style="margin: 20px;">
           <div slot="header" style="font-size: 20px;font-weight: bold;">选择视频流</div>
-          <!-- <el-input v-model="input1" placeholder="请输入内容"></el-input>
-          <el-button @click="nextStep(0)">下一步</el-button> -->
-          <!-- <div v-for="(value, node_addr) in info" :node_addr="node_addr"> -->
-            <!-- todo:点击后填充post请求 -->
-
-            <!-- <div
-              class="available-node"
-              v-for="(v, video_id) in value"
-              v-on:click="selectItem({ key: node_addr + '-' + video_id })"
-            > -->
-            <!-- 显示视频流 -->
-
-            <!-- <div v-for="(value, node_addr) in info" style="display: inline-block; margin-right: 10px;">
-                <div class="available-node"
-                  v-for="(v, video_id) in value" 
-                  v-on:click="selectItem({ key: node_addr + '-' + video_id })"
-                  v-bind:class="{ 'selected': selected === node_addr + '-' + video_id }"
-                  >
-                  <ul style="list-style-type: none;">
-                    <li class="subli">Addr: {{ node_addr }}</li>
-                    <li class="subli">VideoID: {{ video_id }}</li>
-                    <li class="subli">Description: {{ v.type }}</li>
-                  </ul>
-                </div>
-              </div> -->
-
             <el-carousel :autoplay="false" arrow="always" trigger="click">
-              <el-carousel-item v-for="(value, node_addr, index) in info" :key="index">
+              <el-carousel-item v-for="(node_info, node_id, index) in node_video_info" :key="index">
                 <div class="carousel-item-content">
                   <div class="horizontal-scroll-container">
-                    <div v-for="(v, video_id) in value" class="available-node"
-                    v-on:click="selectItem({ key: node_addr + '-' + video_id })"
-                    v-bind:class="{ 'selected': selected === node_addr + '-' + video_id }"
+                    <div v-for="(video_info, video_id) in node_info['videos']" class="available-node"
+                    v-on:click="selectNodeVideo(node_id, video_id, node_id + '-' + video_id)"
+                    v-bind:class="{ 'selected': selected_box_id === node_id + '-' + video_id }"
                     >
                       <div class="centered-item">
                         <ul style="list-style-type: none;"
                         >
-                          <li class="subli">IP地址: {{ node_addr }}</li>
-                          <li class="subli">摄像头ID: {{ video_id }}</li>
-                          <li class="subli">描述: {{ v.type }}</li>
+                          <li class="subli">节点: {{ node_id }}（{{ node_info['ip'] }}）</li>
+                          <li class="subli">摄像头: {{ video_id }}</li>
+                          <li class="subli">描述: {{ video_info['description'] }}</li>
                         </ul>
                       </div>
                     </div>
@@ -55,108 +62,68 @@
           
         </el-card>
 
-        
+        <!-- 选择任务流水 -->
         <el-card shadow="hover" style="margin: 20px;">
-          <div slot="header" style="font-size: 20px;font-weight: bold;">当前配置情况</div>
-          <!-- {{ ipVideoFlowInfo }} -->
-          <el-table :data="ipVideoFlowInfo" style="width: 100%">
-              <el-table-column label="IP地址" width="300">
-              <template #default="scope">
-                  <div style="display: flex; align-items: center">
-                  <!-- <el-icon><timer /></el-icon> -->
-                  <span style="margin-left: 10px">{{ scope.row.selectedIp }}</span>
-                  </div>
-              </template>
-              </el-table-column>
-              <el-table-column label="摄像头ID" width="200">
-              <template #default="scope">
-                  <div>{{ scope.row.selectedVideoId }}</div>
-              </template>
-              </el-table-column>
-              <el-table-column label="当前配置套餐" width="500">
-              <template #default="scope">
-                  <div>{{ scope.row.selectedFlow['dag_name'] }}</div>
-              </template>
-              </el-table-column>
-              
-          </el-table>
-
-        </el-card>
-        
-
-        <!-- 设置任务约束 -->
-        <el-card shadow="hover" style="margin: 20px;">
-          <div slot="header" style="font-size: 20px;font-weight: bold;">设置任务约束</div>
+          <div slot="header" style="font-size: 20px;font-weight: bold;">选择任务流水</div>
           <el-row>
-            <el-col :span="12">
-            
 
+            <el-col :span="6">
               <table style="margin-top: 30px;">
                 <tr>
                   <td><span class="param">选择处理流水线</span></td>
                   <td>
                     <div class="custom-select" style="margin-left: 50px;">
-                    <!-- <select v-model="selectedFlow">
+                    <select v-model="selected_dag_id">
                       <option value="" disabled selected>选择处理流水线</option>
                       <option 
-                        v-for="item in flows"
-                        :key="item['dag_name']"
-                        :value="item['dag']"
-                      >
-                        {{ item['dag_name'] }}
+                        v-for="(dag_info, dag_id, index) in dag_dict"
+                        :key="dag_id"
+                        :value="dag_id">
+                        {{ dag_info['name'] }}
                       </option>
-                    </select> -->
-                    <select v-model="selectedFlow">
-                      <option value="" disabled selected>选择处理流水线</option>
-                      <option 
-                        v-for="item in flows"
-                        :key="item['dag_name']"
-                        :value="{ 'dag': item['dag'], 'dag_name': item['dag_name'] }"
-                      >
-                        {{ item['dag_name'] }}
-                      </option>
-                    </select>
-
-                    
-                    <span class="custom-arrow">&#9662;</span>
-                  </div>
-                  </td>
-                </tr>
-
-                <tr style="margin-top: 30px;">
-                  <td><span class="param">选择优化模式</span></td>
-
-                  <td>
-                    <div class="custom-select" style="margin-left: 50px;">
-                    <select v-model="selectedMode">
-                      <option value="" disabled selected>选择优化模式</option>
-                      <option 
-                        v-for="item in options"
-                        :key="item.value"
-                        :value="item.value"
-                      >
-                        {{ item.label }}
-                      </option>
-                    </select>
+                    </select>                    
                     <span class="custom-arrow">&#9662;</span>
                   </div>
                   </td>
                 </tr>
               </table>
-              
-            
             </el-col>
-            <el-col :span="12">
+
+            <el-col :span="6">
+              <div style="flex: 1;margin-top: 30px;">
+
+                <table style="margin-top: 30px;">
+                  <tr>
+                    <td><span class="param">选择调度器</span></td>
+                    <td>
+                      <div class="custom-select" style="margin-left: 50px;">
+                      <select v-model="selected_scheduler_id">
+                        <option value="" disabled selected>选择调度器</option>
+                        <option 
+                          v-for="(scheduler_info, scheduler_id, index) in scheduler_dict"
+                          :key="scheduler_id"
+                          :value="scheduler_id">
+                          {{ scheduler_info['description'] }}
+                        </option>
+                      </select>                    
+                      <span class="custom-arrow">&#9662;</span>
+                    </div>
+                    </td>
+                  </tr>
+                </table>
+              </div>
+            </el-col>
+
+            <el-col :span="6">
               <div style="flex: 1;margin-top: 30px;">
                 <div>
                   <span class="param" style="margin-right: 20px;">时延约束(s)</span>
                   <el-input v-model="delay_constraint" placeholder="输入时延约束" style="width: 100%; max-width: 200px;margin-left: 63px;" />
                 </div>
-                <div style="margin-top: 10px;">
-                  
+                <!-- <div style="margin-top: 10px;">
                   <span class="param" style="margin-right: 20px;">精度约束(F1 Score)</span>
                   <el-input v-model="acc_constraint" placeholder="输入精度约束" style="width: 100%; max-width: 200px;" />
-                </div>
+                </div> -->
               </div>
             </el-col>
           </el-row>
@@ -175,11 +142,12 @@
   
 <script> 
 import { ElMessage } from "element-plus";
+import * as common from "../common.js";
 export default {
 data() {
     return {
         activeStep: 0, // 当前激活的步骤索引
-        selectedMode:"", // 时延优先vs精度优先
+        selectedMode: "时延优先", // 时延优先vs精度优先
         options:[
             {
                 value:'latency',
@@ -190,68 +158,41 @@ data() {
                 label:'精度优先',
             }
         ],
-        delay_constraint:null,
-        acc_constraint:null,
-
-        // 视频流信息
-        info: "",
-        // 已装载服务
-        servicesList: ['face_alignment','face_detection','car_detection'],
-        // 已选择的流水线
-        selectedServices:[],
-
-        // 点击已装载的服务按钮后改变按钮样式 info->primary plain->no plain
-        buttonTypes: [],
-        isPlain: [], // 初始化按钮是否 plain 的数组
-        
-        // 已选择的视频流相关
-        selected:null,
-        inputText: null,
-        sendUrl:"",
-
-        selectedIp:null,
-        selectedVideoId: null,
+        delay_constraint: null,
+        acc_constraint: null,
 
         // 任务相关
+        inputText: null,
         submit_jobs: [],
         job_info_dict:{},
+
+        // 视频流
+        node_video_info: common.STATIC_NODE_VIDEO_INFO,
+        selected_box_id: null,
+        selected_node_id: null,
+        selected_video_id: null,
 
         // 分页控件
         itemsPerPage: 3, // 每页显示的数量
         currentPage: 1, // 当前页数
 
-        // flow list(套餐)
-        flows:[],
-        // 选择的flow
-        selectedFlow:"",
-        get_dag_url:null,
+        // 流水线
+        dag_dict: common.STATIC_DAG_DICT,
+        selected_dag_id: null,
+
+        // 调度器
+        scheduler_dict: common.STATIC_SCHEDULER_DICT,
+        selected_scheduler_id: null,
 
         // 每个摄像头的套餐配置情况
-        ipVideoFlowInfo:[],
-        };
-    },
-    methods: {
-        changeButtonType(id,serv) {
-          if (this.buttonTypes[id] === "info") {
-            // 如果按钮类型是 "info"，将其改为 "primary" 并添加到 selectedServices 中
-            this.buttonTypes[id] = "primary";
-            this.selectedServices.push(serv);
-            this.isPlain[id] = false;
-          } else {
-            // 如果按钮类型是 "primary"，将其改回 "info" 并从 selectedServices 中删除
-            this.buttonTypes[id] = "info";
-            this.isPlain[id] = true;
-            const index = this.selectedServices.indexOf(serv);
-            if (index !== -1) {
-              this.selectedServices.splice(index, 1);
-            }
-          }
-          // console.log(this.isPlain[id]);
-        },
+        ipVideoFlowInfo: [],
 
+    };
+},
+    methods: {
         // 出错处理
         errHandler(err) {
-          console.error(error);
+          console.error(err);
           sessionStorage.clear();
           // 清空已有任务
           this.submit_jobs = [];
@@ -263,85 +204,67 @@ data() {
         },
 
         // 获取视频流信息
-        getInfo() {
-          // console.log("getInfo!!");
-          fetch("/dag/node/get_video_info")
+        getNodeVideoInfo() {
+          fetch("/dag/get_node_video")
             .then((response) => response.json())
             .then((data) => {
-              // console.log(data);
-              this.info = data;
+              console.log(data);
+              this.node_video_info = data;
             })
             .catch((error) => {
-              errHandler(error);
-            });
-
-          // 获取计算服务信息
-          fetch("/serv/get_service_list")
-            .then((resp) => resp.json())
-            .then((data) => {
-              this.servicesList = data;
-              // console.log(this.servicesList)
-              this.buttonTypes = new Array(this.servicesList.length).fill("info");
-              this.isPlain = new Array(this.servicesList.length).fill(true);
-            })
-            .catch((err) => {
-              errHandler(err);
+              this.errHandler(error);
             });
         },
 
-        // 获取已有的dag套餐
-        getDags(){
-          fetch('/serv/get-dag-workflows-api')
+        // 获取合法DAG
+        getValidDAG() {
+          fetch('/dag/get_valid_dag')
           .then(response => response.json())
           .then(data => {
-            // console.log(data);
-            this.flows = data;
-            // console.log(this.flows)
+            console.log(data);
+            this.dag_dict = data;
           })
           .catch(error =>{
-            errHandler(err);
+            this.errHandler(err);
+          });
+        },
+
+        // 获取合法调度器
+        getValidScheduler() {
+          fetch('/dag/get_scheduler')
+          .then(response => response.json())
+          .then(data => {
+            console.log(data);
+            this.scheduler_dict = data;
+          })
+          .catch(error =>{
+            this.errHandler(err);
           });
         },
 
         // 选择视频流
-        selectItem(item){
-          console.log(item);
-          this.selected = item.key;
-          const ip = item.key.split("-")[0];
-          const videoId = item.key.split("-")[1];
+        selectNodeVideo(node_id, video_id, box_id) {
+          console.log("[selectNodeVideo] node_id=%s, video_id=%s, box_id=%s", node_id, video_id, box_id);
 
-          this.selectedIp = ip;
-          this.selectedVideoId = videoId;
-
-          this.inputText = `{
-        "node_addr": "${ip}",
-        "video_id": ${videoId},
-        "pipeline": ["face_detection", "face_alignment"],
-        "user_constraint": {
-          "delay": 0.3,
-          "accuracy": 0.9
-        }
-    }`;
-
-          this.sendUrl = "/dag/query/submit_query";
-
-          // console.log(this.sendUrl)
+          this.selected_box_id = box_id;
+          this.selected_node_id = node_id;
+          this.selected_video_id = video_id;
         },
 
         // 提交任务
         submitText() {
           this.inputText = {
-          node_addr: this.selectedIp,
-          video_id: parseInt(this.selectedVideoId),
-          // pipeline: this.selectedServices,
-          pipeline: this.selectedFlow['dag'],
-          user_constraint: {
+            node_id: this.selected_node_id,
+            video_id: this.selected_video_id,
+            dag: this.dag_dict[this.selected_dag_id]['dag'],
+            user_constraint: {
               delay: parseFloat(this.delay_constraint),
               accuracy: parseFloat(this.acc_constraint),
             },
+            scheduler_id: this.selected_scheduler_id
           };
-          // console.log(this.inputText);
-          console.log(this.selectedFlow['dag']);
+          console.log(this.inputText);
+          // console.log(this.selectedFlow['dag']);
 
           // let text = this.inputText.replace(/[\r\n\s]/g, ""); // remove all newlines and spaces
           let text = JSON.stringify(this.inputText);
@@ -349,99 +272,77 @@ data() {
           // console.log(JSON.stringify(text))
           console.log(text);
 
-          fetch(this.sendUrl, {
+          // // 静态填充：模拟提交成功后的信息显示
+          // const query_info = {
+          //   selectedIp: this.selected_node_id, // 节点
+          //   selectedVideoId: this.selected_video_id, // 摄像头
+          //   selectedFlow: this.dag_dict[this.selected_dag_id]['name'], // 流水线
+          //   selectedScheduler: this.scheduler_dict[this.selected_scheduler_id]['description'] // 调度器
+          // }
+          // console.log(query_info);
+          // this.ipVideoFlowInfo.push(query_info);
+
+          fetch("/dag/submit_query", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
             },
             body: text,
           })
-            .then((response) => response.json())
-            .then((data) => {
-              // console.log(data.query_id);
-              // 后端系统重启，需要清空前端存储信息
-              if (data.query_id === "GLOBAL_ID_1") {
-                sessionStorage.clear();
+          .then((response) => response.json())
+          .then((data) => {
+              let qid = data['qid'];
+              // let job_info = {
+              //   job_id: qid, // 任务序号
+              //   selectedIp: this.selected_node_id, // IP
+              //   selectedVideoId: this.selected_video_id, // 摄像头ID
+              //   type: this.node_video_info[this.selected_node_id][this.selected_video_id]['description'],
+              //   mode: this.selectedMode, // 优化模式
+              //   delay_constraint: this.delay_constraint,
+              //   acc_constraint:this.acc_constraint,
+              // };
 
-                this.submit_jobs = [];
-                sessionStorage.setItem(
-                  "submit_jobs",
-                  JSON.stringify(this.submit_jobs)
-                );
-                this.job_info_dict = {};
-                sessionStorage.setItem(
-                  "job_info_dict",
-                  JSON.stringify(this.job_info_dict)
-                );
-                // sessionStorage.setItem("delayCons", JSON.stringify(this.delayCons));
-                // sessionStorage.setItem("accCons", JSON.stringify(this.accCons));
+              // this.job_info_dict[qid] = job_info;
+              // // console.log(this.job_info_dict);
+              // sessionStorage.setItem("job_info_dict", JSON.stringify(this.job_info_dict));
+
+              // 设置任务信息总览
+              const query_info = {
+                selectedIp: this.selected_node_id, // 节点
+                selectedVideoId: this.selected_video_id, // 摄像头
+                selectedFlow: this.dag_dict[this.selected_dag_id]['name'], // 流水线
+                selectedScheduler: this.scheduler_dict[this.selected_scheduler_id]['description'] // 调度器
               }
+              console.log(query_info);
 
-              // 将 submit_jobs 存储在 sessionStorage 中
-              this.submit_jobs.push(data.query_id);
-              console.log(this.submit_jobs);
-              sessionStorage.setItem(
-                "submit_jobs",
-                JSON.stringify(this.submit_jobs)
-              );
+              this.ipVideoFlowInfo.push(query_info);
+              // sessionStorage.setItem(
+              //   "ipVideoFlowInfo",
+              //   JSON.stringify(this.ipVideoFlowInfo)
+              // )
 
-              let job_info = {
-                job_id: data.query_id, // 任务序号
-                selectedIp:this.selectedIp, // IP
-                selectedVideoId: this.selectedVideoId, // 摄像头ID
-                type: this.info[this.selectedIp][this.selectedVideoId]["type"],
-                mode: this.selectedMode, // 优化模式
-                delay_constraint: this.delay_constraint,
-                acc_constraint:this.acc_constraint,
-              }
-
-              this.job_info_dict[data.query_id] = job_info;
-              // console.log(this.job_info_dict);
-              sessionStorage.setItem(
-                "job_info_dict",
-                JSON.stringify(this.job_info_dict)
-              )
-              // 设置套餐信息
-              const serviceInfo = {
-                selectedIp:this.selectedIp, // IP
-                selectedVideoId: this.selectedVideoId, // 摄像头ID
-                selectedFlow:this.selectedFlow, // 已配置套餐
-              }
-
-              this.ipVideoFlowInfo.push(serviceInfo);
-              sessionStorage.setItem(
-                "ipVideoFlowInfo",
-                JSON.stringify(this.ipVideoFlowInfo)
-              )
-
-              console.log(this.job_info_dict);
 
               // sessionStorage.setItem("delayCons", JSON.stringify(this.delayCons));
               // sessionStorage.setItem("accCons", JSON.stringify(this.accCons));
 
-              // 设置交互信息
-              this.uploadSuccess = true;
-              this.isSubmit = true;
+              // 显示交互信息
               ElMessage({
                 message: "上传成功",
                 showClose: true,
                 type: "success",
                 duration: 3000,
               });
-            })
-            .catch((error) => {
+          })
+          .catch((error) => {
               console.error(error);
               ElMessage.error("上传失败");
-            });
+          });
+
           // console.log(this.inputText)
           // console.log(JSON.stringify(text) )
         },
   },
-    // created() {
-    //   // 根据 selectedServices 的长度初始化 buttonTypes 和 isPlain 数组
-    //   this.buttonTypes = new Array(this.servicesList.length).fill("info");
-    //   this.isPlain = new Array(this.servicesList.length).fill(true);
-    // },
+
     mounted(){
       // console.log("mounted!");
       // this.flows = {
@@ -465,39 +366,9 @@ data() {
         this.ipVideoFlowInfo = JSON.parse(storedService);
       }
       
-      this.getInfo();
-      this.getDags();
-      // 静态填充
-        this.info = 
-            {
-                "192.168.56.102:7000": {
-                    "0": {
-                        "type": "traffic flow"
-                    },
-                    "1": {
-                        "type": "people indoor"
-                    },
-                    "3":{
-                      "type":"会议室开会"
-                    },
-                },
-                "192.168.56.102:8000": {
-                    "0": {
-                        "type": "traffic flow"
-                    },
-                    "1": {
-                        "type": "people indoor"
-                    }
-                },
-                "192.168.56.102:9000": {
-                    "0": {
-                        "type": "traffic flow"
-                    },
-                    "1": {
-                        "type": "people indoor"
-                    }
-                },
-            };
+      this.getNodeVideoInfo();
+      this.getValidDAG();
+      this.getValidScheduler();
 
       // this.ipVideoFlowInfo = [
       //       {

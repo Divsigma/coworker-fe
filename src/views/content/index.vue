@@ -1,7 +1,7 @@
 <template>
     <div class="content">
         <!-- 运行时情境 -->
-        <div class="card-container" style="height: 500px;">
+        <div class="card-container" style="height: 600px;">
             <!-- 应用情境 -->
             <el-card shadow="hover" class="card" style="flex: 1;height:100%;overflow: scroll;">
                 <div slot="header"  style="font-size: 20px;font-weight: bold; margin-bottom: 20px;display: flex; align-items: center;">
@@ -12,11 +12,10 @@
                         <option
                             v-for="(values, job_id, index) in job_info_dict"
                             :key="job_id"
-                            :value="{'job_id':values['job_id'],'selectedIp':values['selectedIp'],'selectedVideoId':values['selectedVideoId'],
-                                      'type':values['type'],'mode':values['mode'],'delay_constraint':values['delay_constraint'],'acc_constraint':values['acc_constraint']
-                          }"
-                        
-                        >{{ values['selectedIp'] + " - " + values['selectedVideoId'] }}</option>
+                            :value="{'job_id': job_id,'selectedIp':values['selectedIp'],'selectedVideoId':values['selectedVideoId'],
+                                      'type':values['type'],'mode':values['mode'],'delay_constraint':values['delay_constraint'],'acc_constraint':values['acc_constraint']}">
+                          {{ job_id }}
+                        </option>
                         </select>
                         <span class="custom-arrow">&#9662;</span>
                         
@@ -54,9 +53,9 @@
                     </div> -->
                     <div v-show="shouldShowChart(KEY_TYPE_SCHED_CTX_DELAY, ITEM_KEY_SCHED_CTX_DELAY)" 
                          :id="ITEM_KEY_SCHED_CTX_DELAY"
-                         style="width: 500px; height: 250px; margin-top: 20px;"></div>                    
+                         style="width: 300px; height: 150px; margin-top: 5px;"></div>                    
                     <div v-for="(item, idx) in qctx_key_list" :key="idx" style="float: left;margin-left: 20px;">
-                      <div v-show="shouldShowChart(KEY_TYPE_QCTX, item)" :id="item" style="width: 500px; height: 250px; margin-top: 20px;"></div>
+                      <div v-show="shouldShowChart(KEY_TYPE_QCTX, item)" :id="item" style="width: 300px; height: 150px; margin-top: 5px;"></div>
                     </div>
                   </div>
               </el-card>
@@ -97,7 +96,7 @@
                       <img :src="videoUrl + selected" style="width: 100%; height: 90%;" />
                     </div> -->
                     <div v-for="(item, idx) in rtss_key_list" :key="idx" style="float: left;margin-left: 20px;">
-                      <div v-show="shouldShowChart(KEY_TYPE_RTSS, item)" :id="item" style="width: 500px; height: 250px; margin-top: 20px;"></div>
+                      <div v-show="shouldShowChart(KEY_TYPE_RTSS, item)" :id="item" style="width: 300px; height: 150px; margin-top: 20px;"></div>
                     </div>
                   </div>
                 </el-card>
@@ -126,7 +125,7 @@
                   <img :src="videoUrl + selected" style="width: 100%; height: 90%;" />
                 </div> -->
                 <div v-for="(item, idx) in plan_key_list" :key="idx" style="float: left;margin-left: 20px;">
-                  <div v-show="shouldShowChart(KEY_TYPE_PLAN, item)" :id="item" style="width: 500px; height: 250px; margin-top: 20px;"></div>
+                  <div v-show="shouldShowChart(KEY_TYPE_PLAN, item)" :id="item" style="width: 400px; height: 200px; margin-top: 20px;"></div>
                 </div>
               </div>
           </el-card>
@@ -550,10 +549,19 @@ export default{
             legend: {
               data: chart_legend_list
             },
+            grid: {
+                bottom: "20%",
+                right: "15%",
+                top: "30%",
+                left: "15%",
+            },
             series: chart_series_list,
             title:{
               show: true,
-              text: this.mapTOChinese(itemKey),
+              text: itemKey,
+              textStyle: {
+                fontSize: 12
+              }
             }
           };
           chart.setOption(option);
@@ -725,6 +733,20 @@ export default{
               this.assignSchedCtx(null, null);
             });
         },
+
+        // 获取正在运行的任务
+        updateQueryInfo() {
+          fetch("/dag/get_query_meta")
+            .then((resp) => resp.json())
+            .then((data) => {
+              console.log(data);
+              this.job_info_dict = data;
+            })
+            .catch((err) => {
+              console.log(err);
+              this.job_info_dict = common.STATIC_SUBMITED_JOB_DICT;
+            });
+        },
         
     },
     computed: {
@@ -762,13 +784,14 @@ export default{
             // console.log(this.submit_jobs);
         }
 
-        const job_info = sessionStorage.getItem("job_info_dict");
-        if (job_info) {
-          this.job_info_dict = JSON.parse(job_info);
-        } else {
-          this.job_info_dict = common.STATIC_SUBMITED_JOB_DICT;
-        }
-        console.log("[mounted] this.job_info_dict = ", this.job_info_dict);
+        // const job_info = sessionStorage.getItem("job_info_dict");
+        // if (job_info) {
+        //   this.job_info_dict = JSON.parse(job_info);
+        // } else {
+        //   this.job_info_dict = common.STATIC_SUBMITED_JOB_DICT;
+        // }
+        // console.log("[mounted] this.job_info_dict = ", this.job_info_dict);
+        this.updateQueryInfo();
 
         // this.initChart();
         this.timer = setInterval(() => {

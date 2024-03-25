@@ -9,17 +9,17 @@
               <!-- 上面的 div 包含 v-for 循环的内容 -->
               <div>
                 <div v-for="(values, job_id, index) in currentPageItems" class="available-node-result"
-                  v-on:click="selectItem(job_id)"
+                  v-on:click="selectQuery(job_id)"
                   v-bind:class="{ 'selected': selected === job_id }"
                 >
                   <div class="centered-div">
                     <ul style="list-style-type: none;">
-                        <li style="font-size: 16px; font-weight: bold;">{{values.selectedIp}}</li>
-                        <li class="subli">摄像头ID: {{ values.selectedVideoId }}</li>
-                        <li class="subli">描述: {{ values.type }}</li>
-                        <li class="subli">优化模式: {{ values.mode == 'latency'? '时延优先':'精度优先' }}</li>
-                        <li class="subli">
-                            {{ values.mode === 'latency' ? '时延约束' : '精度约束' }}: {{ values.mode === 'latency' ? values.delay_constraint : values.acc_constraint }}
+                        <li style="font-size: 16px; font-weight: bold;">{{values['node_id']}}</li>
+                        <li class="subli">摄像头: {{ values['video_id'] }}</li>
+                        <li class="subli">描述: </li>
+                        <!-- <li class="subli">优化模式: {{ values.mode == 'latency'? '时延优先':'精度优先' }}</li> -->
+                        <li class="subli">调度器: {{ values['scheduler_id'] }}</li>
+                        <li class="subli">时延约束（秒）: {{ 0.2 }}
                             <!-- {{ values.delay_constraint }} - {{ values.acc_constraint }} -->
                         </li>
                     </ul>
@@ -38,7 +38,7 @@
 
         <el-card shadow="hover" style="margin: 20px;">
           <div ref="checkboxContainer">
-            <el-checkbox @change="togglePic()" :disabled="!selected" v-model="checkedPic">原始视频流</el-checkbox>
+            <el-checkbox @change="togglePic()" :disabled="!selected" v-model="checkedPic">处理结果可视化</el-checkbox>
             <!-- <el-checkbox v-for="(item, idx) in keyList" :key="idx" :label="item" @change="toggleChart(item)" :disabled="!selected">{{ item }}</el-checkbox> -->
             <el-checkbox v-for="(item, idx) in modifiedKeyList" :key="idx" :label="item" @change="toggleChart(mapBack(item))" :disabled="!selected" v-model="checkboxes[idx]">{{ item }}</el-checkbox>
   
@@ -75,8 +75,7 @@ export default{
 
             cluster_info:null,
             selectedIp:null,
-            // 资源
-            resource_display:[],
+
             // 可查询任务
             submit_jobs:[],
             // 选取的查询任务
@@ -280,41 +279,6 @@ export default{
             }
           };
           chart.setOption(option);
-
-          // // console.log(data);
-          // const option = {
-          //   xAxis: {
-          //     type: 'category',
-          //     data: data.map((item) => item.x), // 使用映射后的横坐标数据
-          //     name: "帧数"
-          //   },
-          //   yAxis:{
-          //     type:'value',
-          //     name:'检测到的数量'
-          //   },
-          //   series:[
-          //     {
-          //       data: data.map((item) => item.y),
-          //       type:'line',
-          //       label:{
-          //         show:true,
-          //         position:'bottom',
-          //         textStyle:{
-          //           fontSize:12
-          //         }
-          //       }
-          //     }
-          //   ],
-          //   title:{
-          //     show:true,
-          //     text: this.mapTOChinese(itemKey),
-          //   }
-          //   // legend:{
-          //   //   data:[key],
-          //   // }
-            
-          // };
-          // chart.setOption(option);
         },
 
         prevPage() {
@@ -329,7 +293,7 @@ export default{
         },
         
         // 点击选择查询任务
-        selectItem(job_id){
+        selectQuery(job_id) {
           console.log(job_id);
           this.selected = job_id;
           this.submit_job = job_id;
@@ -455,17 +419,17 @@ export default{
           
         },
 
-        // 更新系统资源状态
-        updateResourceUrl() {
-          const url = this.resourceUrl;
-          fetch(url)
+        // 获取正在运行的任务
+        updateQueryInfo() {
+          fetch("/dag/get_query_meta")
             .then((resp) => resp.json())
             .then((data) => {
-              // console.log(data);
-              this.cluster_info = data;
+              console.log(data);
+              this.job_info_dict = data;
             })
             .catch((err) => {
               console.log(err);
+              this.job_info_dict = common.STATIC_SUBMITED_JOB_DICT;
             });
         },
         
@@ -545,27 +509,14 @@ export default{
 
     mounted(){
         
-        // 获取可查询的任务相关信息 存储在submit_jobs和job_info_dict中
-        const delay_list = sessionStorage.getItem("delay_list");
-        if (delay_list) {
-            this.delay_list = JSON.parse(delay_list);
-            // console.log(this.submit_jobs);
-        }
+      // 获取可查询的任务相关信息 存储在submit_jobs和job_info_dict中
+      const delay_list = sessionStorage.getItem("delay_list");
+      if (delay_list) {
+          this.delay_list = JSON.parse(delay_list);
+          // console.log(this.submit_jobs);
+      }
 
-        const job_info = sessionStorage.getItem("job_info_dict");
-        if (job_info) {
-            this.job_info_dict = JSON.parse(job_info);
-        } else {
-          this.job_info_dict = common.STATIC_SUBMITED_JOB_DICT;
-        }
-        console.log("[mounted] this.job_info_dict = ", this.job_info_dict);
-
-        const submitJobs = sessionStorage.getItem("submit_jobs");
-        if (submitJobs) {
-          this.submit_jobs = JSON.parse(submitJobs);
-        }
-        // REMOVE: 静态填充
-        this.resource_display = ["cpu_ratio","mem_ratio","gpu_ratio","net_ratio(MBps)"];
+      this.updateQueryInfo();
 
       this.updateKeyList();
 
