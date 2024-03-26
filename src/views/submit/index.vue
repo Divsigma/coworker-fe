@@ -163,7 +163,6 @@ data() {
 
         // 任务相关
         inputText: null,
-        submit_jobs: [],
         job_info_dict:{},
 
         // 视频流
@@ -196,13 +195,6 @@ data() {
         errHandler(err) {
           console.error(err);
           sessionStorage.clear();
-          // 清空已有任务
-          this.submit_jobs = [];
-          // 更新sessionStorage
-          sessionStorage.setItem("submit_jobs", JSON.stringify(this.submit_jobs));
-          // ?
-          // sessionStorage.setItem("delayCons", JSON.stringify(this.delayCons));
-          // sessionStorage.setItem("accCons", JSON.stringify(this.accCons));
         },
 
         // 获取视频流信息
@@ -263,6 +255,7 @@ data() {
               delay: parseFloat(this.delay_constraint),
               accuracy: parseFloat(this.acc_constraint),
             },
+            dag_id: this.selected_dag_id,
             scheduler_id: this.selected_scheduler_id
           };
           console.log(this.inputText);
@@ -294,19 +287,6 @@ data() {
           .then((response) => response.json())
           .then((data) => {
               let qid = data['qid'];
-              // let job_info = {
-              //   job_id: qid, // 任务序号
-              //   selectedIp: this.selected_node_id, // IP
-              //   selectedVideoId: this.selected_video_id, // 摄像头ID
-              //   type: this.node_video_info[this.selected_node_id][this.selected_video_id]['description'],
-              //   mode: this.selectedMode, // 优化模式
-              //   delay_constraint: this.delay_constraint,
-              //   acc_constraint:this.acc_constraint,
-              // };
-
-              // this.job_info_dict[qid] = job_info;
-              // // console.log(this.job_info_dict);
-              // sessionStorage.setItem("job_info_dict", JSON.stringify(this.job_info_dict));
 
               // 设置任务信息总览
               const query_info = {
@@ -318,14 +298,6 @@ data() {
               console.log(query_info);
 
               this.ipVideoFlowInfo.push(query_info);
-              // sessionStorage.setItem(
-              //   "ipVideoFlowInfo",
-              //   JSON.stringify(this.ipVideoFlowInfo)
-              // )
-
-
-              // sessionStorage.setItem("delayCons", JSON.stringify(this.delayCons));
-              // sessionStorage.setItem("accCons", JSON.stringify(this.accCons));
 
               // 显示交互信息
               ElMessage({
@@ -340,8 +312,6 @@ data() {
               ElMessage.error("上传失败");
           });
 
-          // console.log(this.inputText)
-          // console.log(JSON.stringify(text) )
         },
 
         // 获取正在运行的任务
@@ -358,7 +328,7 @@ data() {
                 const query_info = {
                   selectedIp: job['node_id'], // 节点
                   selectedVideoId: job['video_id'], // 摄像头
-                  selectedFlow: '', // 流水线
+                  selectedFlow: this.dag_dict[job['dag_id']]['name'], // 流水线
                   selectedScheduler: this.scheduler_dict[job['scheduler_id']]['description'] // 调度器
                 }
                 console.log(query_info);
@@ -374,27 +344,6 @@ data() {
   },
 
     mounted(){
-      // console.log("mounted!");
-      // this.flows = {
-      //   "face_estimation":["face_detection","face_alignment"],
-      //   "car_detecion":['car_detection'],
-      // };
-      const submitJobs = sessionStorage.getItem("submit_jobs");
-      if (submitJobs) {
-        this.submit_jobs = JSON.parse(submitJobs);
-      }
-
-      // const storedJobInfo = sessionStorage.getItem("job_info_dict");
-
-      // if (storedJobInfo) {
-      //   // 如果 sessionStorage 中存在保存的任务信息，则将其解析为对象并赋值给 this.job_info_dict
-      //   this.job_info_dict = JSON.parse(storedJobInfo);
-      // }
-
-      // const storedService = sessionStorage.getItem("ipVideoFlowInfo");
-      // if(storedService){
-      //   this.ipVideoFlowInfo = JSON.parse(storedService);
-      // }
 
       this.updateQueryInfo();
 

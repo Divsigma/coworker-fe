@@ -16,7 +16,7 @@
                     <ul style="list-style-type: none;">
                         <li style="font-size: 16px; font-weight: bold;">{{job_id}}</li>
                         <li class="subli">节点：{{values['node_id']}}，摄像头: {{ values['video_id'] }}</li>
-                        <li class="subli">流水线: </li>
+                        <li class="subli">流水线: {{ dag_dict[values['dag_id']]['name'] }}</li>
                         <!-- <li class="subli">优化模式: {{ values.mode == 'latency'? '时延优先':'精度优先' }}</li> -->
                         <li class="subli">调度器: {{ scheduler_dict[values['scheduler_id']]['description'] }}</li>
                         <li class="subli">时延约束（秒）: {{ 0.2 }}
@@ -77,12 +77,11 @@ export default{
             selectedIp:null,
 
             // 可查询任务
-            submit_jobs:[],
             // 选取的查询任务
-            submit_job:null,
+            submit_job: null,
             // 查询结果
-            result:null,
-            appended_result:null,
+            result: null,
+            appended_result: null,
 
             // 选择的查询任务
             selected: null,
@@ -426,6 +425,7 @@ export default{
           console.log("[updateQueryInfo]");
 
           this.getValidScheduler();
+          this.getValidDAG();
 
           fetch("/dag/get_query_meta")
             .then((resp) => resp.json())
@@ -438,6 +438,18 @@ export default{
               this.job_info_dict = common.STATIC_SUBMITED_JOB_DICT;
             });
         },
+        // 获取合法DAG
+        getValidDAG() {
+          fetch('/dag/get_valid_dag')
+          .then(response => response.json())
+          .then(data => {
+            console.log(data);
+            this.dag_dict = data;
+          })
+          .catch(err =>{
+            this.errHandler(err);
+          });
+        },
         // 获取合法调度器
         getValidScheduler() {
           fetch('/dag/get_scheduler')
@@ -446,11 +458,15 @@ export default{
             console.log(data);
             this.scheduler_dict = data;
           })
-          .catch(error =>{
+          .catch(err =>{
             this.errHandler(err);
           });
         },
-        
+        // 出错处理
+        errHandler(err) {
+          console.error(err);
+          sessionStorage.clear();
+        },
     },
     computed: {
         pageCount() {
@@ -527,11 +543,9 @@ export default{
 
     mounted(){
         
-      // 获取可查询的任务相关信息 存储在submit_jobs和job_info_dict中
       const delay_list = sessionStorage.getItem("delay_list");
       if (delay_list) {
           this.delay_list = JSON.parse(delay_list);
-          // console.log(this.submit_jobs);
       }
 
       this.updateKeyList();
