@@ -23,13 +23,13 @@
                   
                   
                 </div>
-                <div style="display:flex;font-size:13px;font-weight:500;margin-left:20px;width:100%;color:gray;">
+                <!-- <div style="display:flex;font-size:13px;font-weight:500;margin-left:20px;width:100%;color:gray;">
                       <div style="flex:1;margin-left:10px;">描述: {{ selectedJob.type }}</div>
-                      <div style="flex:1;margin-left:10px;">优化模式: <div v-show="selectedJob" style="display:inline-block">{{ selectedJob.mode == 'latency'? '时延优先':'精度优先' }}</div></div>
+                      <div style="flex:1;margin-left:10px;">优化模式: <div v-show="selectedJob" style="display:inline-block">{{ '时延优先' }}</div></div>
                       <div style="flex:1;margin-left:10px;">
-                        {{ selectedJob.mode === 'latency' ? '时延约束' : '精度约束' }}: {{ selectedJob.mode === 'latency' ? selectedJob.delay_constraint+'s' : selectedJob.acc_constraint }}
+                        {{ '时延约束' }}: {{ 0.2 }}
                       </div>
-                </div>
+                </div> -->
               
                 <el-card shadow="hover" style="margin: 20px; overflow: scroll; height: 100%;">
                   <!-- 选框容器 -->
@@ -540,20 +540,25 @@ export default{
             xAxis: {
               type: 'category',
               data: itemXYData.map((item) => item[DATA_KEY_X]), // 使用映射后的横坐标数据
-              name: "任务ID"
+              // name: "任务ID"
             },
             yAxis:{
               type: y_axis_type,
-              name: '值'
+              // name: '值'
             },
             legend: {
-              data: chart_legend_list
+              data: chart_legend_list,
+              orient: 'vertical',
+              right: 10,
+              textStyle: {
+                fontSize: 8
+              }
             },
             grid: {
                 bottom: "20%",
-                right: "15%",
-                top: "30%",
-                left: "15%",
+                right: "10%",
+                top: "20%",
+                left: "25%",
             },
             series: chart_series_list,
             title:{

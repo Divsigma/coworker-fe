@@ -19,7 +19,7 @@
                   <div>{{ scope.row.selectedVideoId }}</div>
               </template>
               </el-table-column>
-              <el-table-column label="配置套餐" width="200">
+              <el-table-column label="流水线" width="200">
               <template #default="scope">
                   <div>{{ scope.row.selectedFlow }}</div>
               </template>
@@ -70,11 +70,11 @@
             <el-col :span="6">
               <table style="margin-top: 30px;">
                 <tr>
-                  <td><span class="param">选择处理流水线</span></td>
+                  <td><span class="param">选择流水线</span></td>
                   <td>
                     <div class="custom-select" style="margin-left: 50px;">
                     <select v-model="selected_dag_id">
-                      <option value="" disabled selected>选择处理流水线</option>
+                      <option value="" disabled selected>选择流水线</option>
                       <option 
                         v-for="(dag_info, dag_id, index) in dag_dict"
                         :key="dag_id"
@@ -158,7 +158,7 @@ data() {
                 label:'精度优先',
             }
         ],
-        delay_constraint: null,
+        delay_constraint: 0.2,
         acc_constraint: null,
 
         // 任务相关
@@ -186,6 +186,8 @@ data() {
 
         // 每个摄像头的套餐配置情况
         ipVideoFlowInfo: [],
+
+        timer: null
 
     };
 },
@@ -341,6 +343,34 @@ data() {
           // console.log(this.inputText)
           // console.log(JSON.stringify(text) )
         },
+
+        // 获取正在运行的任务
+        updateQueryInfo() {
+          fetch("/dag/get_query_meta")
+            .then((resp) => resp.json())
+            .then((data) => {
+              console.log(data);
+              this.job_info_dict = data;
+              this.ipVideoFlowInfo = [];
+              
+              for (var ent of Object.entries(data)) {
+                var job = ent[1];
+                const query_info = {
+                  selectedIp: job['node_id'], // 节点
+                  selectedVideoId: job['video_id'], // 摄像头
+                  selectedFlow: '', // 流水线
+                  selectedScheduler: this.scheduler_dict[job['scheduler_id']]['description'] // 调度器
+                }
+                console.log(query_info);
+                this.ipVideoFlowInfo.push(query_info);
+              }
+
+            })
+            .catch((err) => {
+              console.log(err);
+              this.job_info_dict = common.STATIC_SUBMITED_JOB_DICT;
+            });
+        },
   },
 
     mounted(){
@@ -354,21 +384,26 @@ data() {
         this.submit_jobs = JSON.parse(submitJobs);
       }
 
-      const storedJobInfo = sessionStorage.getItem("job_info_dict");
+      // const storedJobInfo = sessionStorage.getItem("job_info_dict");
 
-      if (storedJobInfo) {
-        // 如果 sessionStorage 中存在保存的任务信息，则将其解析为对象并赋值给 this.job_info_dict
-        this.job_info_dict = JSON.parse(storedJobInfo);
-      }
+      // if (storedJobInfo) {
+      //   // 如果 sessionStorage 中存在保存的任务信息，则将其解析为对象并赋值给 this.job_info_dict
+      //   this.job_info_dict = JSON.parse(storedJobInfo);
+      // }
 
-      const storedService = sessionStorage.getItem("ipVideoFlowInfo");
-      if(storedService){
-        this.ipVideoFlowInfo = JSON.parse(storedService);
-      }
-      
-      this.getNodeVideoInfo();
-      this.getValidDAG();
-      this.getValidScheduler();
+      // const storedService = sessionStorage.getItem("ipVideoFlowInfo");
+      // if(storedService){
+      //   this.ipVideoFlowInfo = JSON.parse(storedService);
+      // }
+
+      this.updateQueryInfo();
+
+      this.timer = setInterval(() => {
+        this.getNodeVideoInfo();
+        this.getValidDAG();
+        this.getValidScheduler();
+        this.updateQueryInfo();
+      }, 6000);
 
       // this.ipVideoFlowInfo = [
       //       {
@@ -377,6 +412,10 @@ data() {
       //         selectedFlow:{ 'dag': ["face_detection","face_alignment"], 'dag_name': "face_estimation" },
       //       }
       // ];
+    },
+
+    beforeUnmount() {
+      clearInterval(this.timer);
     },
 };
 </script>

@@ -14,11 +14,11 @@
                 >
                   <div class="centered-div">
                     <ul style="list-style-type: none;">
-                        <li style="font-size: 16px; font-weight: bold;">{{values['node_id']}}</li>
-                        <li class="subli">摄像头: {{ values['video_id'] }}</li>
-                        <li class="subli">描述: </li>
+                        <li style="font-size: 16px; font-weight: bold;">{{job_id}}</li>
+                        <li class="subli">节点：{{values['node_id']}}，摄像头: {{ values['video_id'] }}</li>
+                        <li class="subli">流水线: </li>
                         <!-- <li class="subli">优化模式: {{ values.mode == 'latency'? '时延优先':'精度优先' }}</li> -->
-                        <li class="subli">调度器: {{ values['scheduler_id'] }}</li>
+                        <li class="subli">调度器: {{ scheduler_dict[values['scheduler_id']]['description'] }}</li>
                         <li class="subli">时延约束（秒）: {{ 0.2 }}
                             <!-- {{ values.delay_constraint }} - {{ values.acc_constraint }} -->
                         </li>
@@ -89,7 +89,9 @@ export default{
 
             node_type_list: [],
             // 前端获取已经提交的任务
-            job_info_dict:{},
+            job_info_dict: {},
+            scheduler_dict: {},
+            dag_dict: {},
 
             // 绘制结果折线图
             chart:null,
@@ -421,6 +423,10 @@ export default{
 
         // 获取正在运行的任务
         updateQueryInfo() {
+          console.log("[updateQueryInfo]");
+
+          this.getValidScheduler();
+
           fetch("/dag/get_query_meta")
             .then((resp) => resp.json())
             .then((data) => {
@@ -431,6 +437,18 @@ export default{
               console.log(err);
               this.job_info_dict = common.STATIC_SUBMITED_JOB_DICT;
             });
+        },
+        // 获取合法调度器
+        getValidScheduler() {
+          fetch('/dag/get_scheduler')
+          .then(response => response.json())
+          .then(data => {
+            console.log(data);
+            this.scheduler_dict = data;
+          })
+          .catch(error =>{
+            this.errHandler(err);
+          });
         },
         
     },
@@ -516,21 +534,19 @@ export default{
           // console.log(this.submit_jobs);
       }
 
-      this.updateQueryInfo();
-
       this.updateKeyList();
 
       // this.initChart();
       this.timer = setInterval(() => {
         this.updateResultUrl();
-        // this.updateResourceUrl();
+        this.updateQueryInfo();
 
         // TODO:updateKeyList后会导致选中的复选框内容可能变化
         // 解决:如果keyList发生变化则清空已选内容和复选框勾选状态;不变则继续更新原来的折线图
         for(var i = 0;i < this.selectedCharts.length;i ++){
           this.showSelectedResult(this.selectedCharts[i]);
         }
-      }, 6000);
+      }, 3000);
       
       
     },
